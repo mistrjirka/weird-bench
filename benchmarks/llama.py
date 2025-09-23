@@ -2,6 +2,7 @@
 """
 Llama.cpp benchmark implementation.
 """
+import json
 import os
 import re
 import shutil
@@ -586,27 +587,61 @@ class LlamaBenchmark(BaseBenchmark):
         """Run a single benchmark command and parse results."""
         start_time = time.perf_counter()
         
+        # Add JSON output flag at the start of the command
+        json_cmd = [cmd[0]] + ["-o", "json"] + cmd[1:]
+        
         try:
-            result = self.run_command(cmd, cwd=self.project_dir, check=False)
+            print(f"🏃 Running {run_type} benchmark: prompt={prompt_size}, gen={generation_size}, ngl={ngl}")
+            result = self.run_command(json_cmd, cwd=self.project_dir, check=False)
             elapsed_time = time.perf_counter() - start_time
             
-            # Parse llama-bench output
-            metrics = self._parse_llama_bench_output(result.stdout or "")
+            if result.returncode != 0:
+                print(f"❌ Benchmark failed: {result.stderr}")
+                return {
+                    "type": run_type,
+                    "prompt_size": prompt_size,
+                    "generation_size": generation_size,
+                    "ngl": ngl,
+                    "returncode": result.returncode,
+                    "elapsed_seconds": elapsed_time,
+                    "failed": True,
+                    "error": result.stderr,
+                    "metrics": {},
+                }
             
-            return {
-                "type": run_type,
-                "prompt_size": prompt_size,
-                "generation_size": generation_size,
-                "ngl": ngl,
-                "returncode": result.returncode,
-                "elapsed_seconds": elapsed_time,
-                "metrics": metrics,
-                "stdout_tail": (result.stdout or "")[-1000:],
-                "stderr_tail": (result.stderr or "")[-500:],
-            }
+            # Parse JSON output
+            try:
+                json_results = json.loads(result.stdout or "[]")
+                metrics = self._parse_llama_bench_json(json_results, prompt_size, generation_size)
+                
+                return {
+                    "type": run_type,
+                    "prompt_size": prompt_size,
+                    "generation_size": generation_size,
+                    "ngl": ngl,
+                    "returncode": result.returncode,
+                    "elapsed_seconds": elapsed_time,
+                    "metrics": metrics,
+                    "raw_json": json_results,
+                }
+            except json.JSONDecodeError as e:
+                print(f"⚠️  Failed to parse JSON output, falling back to text parsing: {e}")
+                # Fallback to old text parsing
+                metrics = self._parse_llama_bench_output(result.stdout or "")
+                return {
+                    "type": run_type,
+                    "prompt_size": prompt_size,
+                    "generation_size": generation_size,
+                    "ngl": ngl,
+                    "returncode": result.returncode,
+                    "elapsed_seconds": elapsed_time,
+                    "metrics": metrics,
+                    "stdout_tail": (result.stdout or "")[-1000:],
+                }
             
         except Exception as e:
             elapsed_time = time.perf_counter() - start_time
+            print(f"❌ Exception during benchmark: {e}")
             return {
                 "type": run_type,
                 "prompt_size": prompt_size,
@@ -617,6 +652,86 @@ class LlamaBenchmark(BaseBenchmark):
                 "error": str(e),
                 "metrics": {},
             }
+    
+    def _parse_llama_bench_json(self, json_results: List[Dict], prompt_size: int, 
+                               generation_size: int) -> Dict[str, Any]:
+        """Parse llama-bench JSON output to extract performance metrics."""
+        metrics = {}
+        
+        if not json_results:
+            return metrics
+        
+        # Find prompt and generation benchmark results
+        prompt_result = None
+        gen_result = None
+        
+        for result in json_results:
+            if result.get("n_prompt", 0) == prompt_size and result.get("n_gen", 0) == 0:
+                prompt_result = result
+            elif result.get("n_prompt", 0) == 0 and result.get("n_gen", 0) == generation_size:
+                gen_result = result
+        
+        # Extract system information from first result
+        if json_results:
+            first_result = json_results[0]
+            metrics["system_info"] = {
+                "cpu_info": first_result.get("cpu_info", "Unknown"),
+                "gpu_info": first_result.get("gpu_info", "Unknown"),
+                "backends": first_result.get("backends", "Unknown"),
+                "model_type": first_result.get("model_type", "Unknown"),
+                "model_size": first_result.get("model_size", 0),
+                "model_n_params": first_result.get("model_n_params", 0),
+                "n_threads": first_result.get("n_threads", 0),
+                "n_gpu_layers": first_result.get("n_gpu_layers", 0),
+            }
+        
+        # Extract prompt processing metrics
+        if prompt_result:
+            avg_ns = prompt_result.get("avg_ns", 0)
+            avg_ts = prompt_result.get("avg_ts", 0)
+            stddev_ns = prompt_result.get("stddev_ns", 0)
+            stddev_ts = prompt_result.get("stddev_ts", 0)
+            
+            metrics["prompt_processing"] = {
+                "avg_time_ns": avg_ns,
+                "avg_tokens_per_sec": avg_ts,
+                "stddev_time_ns": stddev_ns,
+                "stddev_tokens_per_sec": stddev_ts,
+                "avg_time_ms": avg_ns / 1_000_000 if avg_ns > 0 else 0,
+                "samples_ns": prompt_result.get("samples_ns", []),
+                "samples_ts": prompt_result.get("samples_ts", []),
+            }
+        
+        # Extract generation metrics
+        if gen_result:
+            avg_ns = gen_result.get("avg_ns", 0)
+            avg_ts = gen_result.get("avg_ts", 0)
+            stddev_ns = gen_result.get("stddev_ns", 0)
+            stddev_ts = gen_result.get("stddev_ts", 0)
+            
+            metrics["generation"] = {
+                "avg_time_ns": avg_ns,
+                "avg_tokens_per_sec": avg_ts,
+                "stddev_time_ns": stddev_ns,
+                "stddev_tokens_per_sec": stddev_ts,
+                "avg_time_ms": avg_ns / 1_000_000 if avg_ns > 0 else 0,
+                "samples_ns": gen_result.get("samples_ns", []),
+                "samples_ts": gen_result.get("samples_ts", []),
+            }
+        
+        # Calculate combined metrics for compatibility
+        prompt_ts = metrics.get("prompt_processing", {}).get("avg_tokens_per_sec", 0)
+        gen_ts = metrics.get("generation", {}).get("avg_tokens_per_sec", 0)
+        
+        # Use generation tokens/sec as primary metric (more relevant for inference)
+        metrics["tokens_per_second"] = gen_ts if gen_ts > 0 else prompt_ts
+        
+        # Calculate total time
+        prompt_time_ms = metrics.get("prompt_processing", {}).get("avg_time_ms", 0)
+        gen_time_ms = metrics.get("generation", {}).get("avg_time_ms", 0)
+        metrics["total_time_ms"] = prompt_time_ms + gen_time_ms
+        
+        return metrics
     
     def _parse_llama_bench_output(self, output: str) -> Dict[str, Any]:
         """Parse llama-bench output to extract performance metrics."""
