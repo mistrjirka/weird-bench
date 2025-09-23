@@ -8,20 +8,19 @@ The benchmark suite is built with a modular architecture featuring efficient res
 
 ```
 weird-bench/
-├── benchmarks/              # Benchmark implementations
+├── benchmarks/             # Individual benchmark implementations
 │   ├── __init__.py
-│   ├── base.py             # Base benchmark class
-│   ├── reversan.py         # Reversan Engine benchmark
-│   └── llama.py            # Llama.cpp benchmark (with CompilationToolbox)
-├── models/                 # Shared model storage (auto-created)
-│   └── *.gguf             # Downloaded models (shared across builds)
-├── results/                # Benchmark results (auto-created)
-├── result_plots/           # Generated plots (auto-created)
-├── run_benchmarks.py       # Main benchmark runner
-├── plot_all_results.py     # Plotting script for all benchmarks
-├── run_complete_benchmark.py  # Complete pipeline runner
-├── test_refactoring.py     # Architecture refactoring tests
-└── bench.py               # Legacy Reversan-only benchmark (deprecated)
+│   ├── base.py            # Base benchmark class
+│   ├── reversan.py        # Reversan Engine benchmark
+│   ├── llama.py           # Llama.cpp benchmark
+│   ├── blender.py         # Blender 3D rendering benchmark
+│   └── sevenzip.py        # 7-Zip compression benchmark
+├── results/               # Benchmark results (JSON files)
+├── result_plots/          # Generated plots and visualizations
+├── models/                # Cached ML models (auto-created)
+├── install_deps_arch.sh   # Arch Linux dependency installer
+├── install_deps_ubuntu.sh # Ubuntu/Debian dependency installer
+└── install_deps_fedora.sh # Fedora/RHEL dependency installer
 ```
 
 ### Key Architecture Features
@@ -39,7 +38,7 @@ weird-bench/
 - **Repository**: https://github.com/Saniel0/Reversan-Engine.git
 - **Tests**:
   - Depth sweep (1-12) performance analysis
-  - Thread scaling performance (1-8 threads)
+  - Thread scaling performance (1 to max CPU threads - automatically detected)
 - **Metrics**: Execution time, memory usage (with GNU time)
 - **Compilation**: CMake with Release configuration
 
@@ -59,15 +58,45 @@ weird-bench/
   - Detailed timing: configuration phase + compilation phase
   - Model copied from shared location (no re-download between builds)
 
+### 3. Blender 3D Rendering Benchmark
+- **Benchmark Suite**: Official Blender Benchmark 2.0 (auto-downloaded)
+- **Tests**:
+  - Automatic device detection (CPU, GPU with various frameworks like HIP, CUDA)
+  - Scene rendering: monster, junkshop, classroom
+  - Performance comparison across all available devices
+- **Output**: JSON results with samples per minute for each scene
+- **Version**: Blender 4.5.0 with CLI automation
+
+### 4. 7-Zip Compression Benchmark
+- **Tests**:
+  - Multi-threaded compression performance (1 to max CPU threads)
+  - Realistic test data creation (text and binary files)
+  - Thread scaling efficiency analysis
+- **Metrics**: Compression time, archive size, speedup calculations
+- **Requirements**: System-installed 7-Zip (p7zip-full package)
+
 ## Usage
 
-### Test Architecture
-```bash
-# Test system dependencies before running benchmarks
-python3 test_architecture.py
+### Available Benchmarks Summary
 
-# Test architecture refactoring and improvements
-python3 test_refactoring.py
+- **reversan**: Game engine performance with depth and thread scaling
+- **llama**: LLM inference with CPU/GPU comparison and build timing
+- **blender**: 3D rendering across all available devices (CPU, GPU)
+- **7zip**: Compression performance with multi-threading analysis
+
+### Installation
+
+Install dependencies using the provided scripts:
+
+```bash
+# Arch Linux
+./install_deps_arch.sh
+
+# Ubuntu/Debian  
+./install_deps_ubuntu.sh
+
+# Fedora/RHEL
+./install_deps_fedora.sh
 
 # Test error handling improvements
 python3 test_error_handling.py
@@ -222,7 +251,26 @@ Set verbose output by modifying the benchmark classes or adding debug prints.
 
 ## Legacy Support
 
-The original `bench.py` script is maintained for backward compatibility but is deprecated. Use `run_benchmarks.py --benchmark reversan` instead.
+### Installation Scripts
+
+Dependency installation scripts are provided for major Linux distributions:
+
+```bash
+# Arch Linux
+./install_deps_arch.sh
+
+# Ubuntu/Debian
+./install_deps_ubuntu.sh
+
+# Fedora/RHEL
+./install_deps_fedora.sh
+```
+
+These scripts install all required dependencies including:
+- Development tools (cmake, git, build-essential)
+- Python packages (matplotlib, numpy, requests, pexpect)
+- 7-Zip for compression benchmarks
+- Vulkan development libraries for GPU acceleration
 
 ## License
 
