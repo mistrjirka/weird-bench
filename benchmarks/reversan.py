@@ -2,6 +2,7 @@
 """
 Reversan Engine benchmark implementation.
 """
+import multiprocessing
 import os
 import re
 import shutil
@@ -101,11 +102,23 @@ class ReversanBenchmark(BaseBenchmark):
         
         raise RuntimeError("No 'reversan*' binary found in repo root.")
     
+    def _get_cpu_count(self) -> int:
+        """Get number of CPU cores/threads available."""
+        try:
+            # Try to get logical CPU count (includes hyperthreading)
+            cpu_count = multiprocessing.cpu_count()
+            print(f"Detected {cpu_count} CPU threads")
+            return cpu_count
+        except (ImportError, NotImplementedError):
+            # Fallback to 8 if detection fails
+            print("Could not detect CPU count, defaulting to 8 threads")
+            return 8
+    
     def _reversan_supports_threads(self, bin_path: str) -> bool:
         """Check if the binary supports threads."""
         try:
-            p = self.run_command([bin_path, "--help"], check=False)
-            txt = (p.stdout or "") + (p.stderr or "")
+            p = subprocess.run([bin_path, "--help"], capture_output=True, text=True, timeout=10)
+            txt = p.stdout + p.stderr
             return bool(re.search(r"(^|\s)-t(\s|=|,|/)|threads", txt, re.IGNORECASE))
         except Exception:
             return False
@@ -160,8 +173,9 @@ class ReversanBenchmark(BaseBenchmark):
                 })
         
         # Threads sweep tests @ depth 11
-        print(f"\n=== Running threads sweep tests (1-8) at depth 11 with {runs} run(s) each ===")
-        for t in range(1, 9):
+        max_threads = self._get_cpu_count()
+        print(f"\n=== Running threads sweep tests (1-{max_threads}) at depth 11 with {runs} run(s) each ===")
+        for t in range(1, max_threads + 1):
             if not threads_supported:
                 print(f"Skipping threads test {t} (threads not supported)")
                 results["runs_threads"].append({

@@ -12,6 +12,8 @@ from typing import Dict, Any, List
 # Import benchmark implementations
 from benchmarks.reversan import ReversanBenchmark
 from benchmarks.llama import LlamaBenchmark
+from benchmarks.sevenzip import SevenZipBenchmark
+from benchmarks.blender import BlenderBenchmark
 
 
 class BenchmarkRunner:
@@ -21,7 +23,8 @@ class BenchmarkRunner:
         self.output_dir = output_dir
         self.benchmarks = {
             "reversan": ReversanBenchmark,
-            "llama": LlamaBenchmark
+            "llama": LlamaBenchmark,
+            "blender": BlenderBenchmark
         }
         os.makedirs(output_dir, exist_ok=True)
     
@@ -98,10 +101,10 @@ def main():
     
     parser.add_argument(
         "--benchmark", "-b",
-        choices=["reversan", "llama", "all"],
+        choices=["reversan", "llama", "7zip", "all"],
         default="all",
         help="Which benchmark to run: 'reversan' (game engine depth/thread scaling), "
-             "'llama' (LLM inference with build timing), or 'all' (both benchmarks)"
+             "'llama' (LLM inference with build timing), '7zip' (compression performance), or 'all' (all benchmarks)"
     )
     
     parser.add_argument(
@@ -137,7 +140,7 @@ def main():
         print()
         print("  reversan - Reversan Engine benchmark")
         print("    • Tests game engine performance at different search depths (1-12)")
-        print("    • Tests thread scaling performance (1-8 threads)")
+        print("    • Tests thread scaling performance (1 to max CPU threads)")
         print("    • Measures execution time and memory usage")
         print("    • Supports multiple test runs for averaging")
         print()
@@ -148,7 +151,14 @@ def main():
         print("    • GPU inference tests (ngl=99) if Vulkan is available")
         print("    • Each build gets clean environment, model copied from cache")
         print()
-        print("  all - Run both benchmarks (default)")
+        print("  7zip - 7-Zip compression benchmark")
+        print("    • Tests compression performance with multi-threading")
+        print("    • Creates test data (text and binary files) for realistic compression")
+        print("    • Measures compression time, ratio, and thread scaling efficiency")
+        print("    • Tests thread counts from 1 to maximum CPU threads")
+        print("    • Uses system-installed 7-Zip (p7zip-full package)")
+        print()
+        print("  all - Run all benchmarks (default)")
         print("    • Efficient execution with shared model caching")
         print("    • Combined results and plotting")
         return 0

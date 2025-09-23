@@ -104,7 +104,7 @@ def plot_reversan_threads_results(results, output_dir):
     """Plot Reversan threads results."""
     threads_data = results['runs_threads']
     threads = [run['threads'] for run in threads_data]
-    times = [extract_metrics_from_run(run)['elapsed_seconds'] for run in threads_data]
+    times = [extract_metrics_from_run(run)['user_seconds'] for run in threads_data]
     
     # Calculate speedup (relative to single thread)
     baseline_time = times[0]  # Assuming first entry is single thread
@@ -113,11 +113,11 @@ def plot_reversan_threads_results(results, output_dir):
     # Create figure with subplots
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
     
-    # Plot execution time (LINEAR scale)
+    # Plot CPU time (LINEAR scale)
     ax1.plot(threads, times, marker='o', color='tab:blue', linewidth=2, markersize=6)
     ax1.set_xlabel('Number of Threads', fontsize=12)
-    ax1.set_ylabel('Execution Time (seconds)', fontsize=12)
-    ax1.set_title('Execution Time vs Thread Count\n(Linear Scale)', fontsize=12, fontweight='bold')
+    ax1.set_ylabel('CPU Time (seconds)', fontsize=12)
+    ax1.set_title('CPU Time vs Thread Count\n(Linear Scale)', fontsize=12, fontweight='bold')
     ax1.grid(True, alpha=0.3)
     ax1.set_xticks(threads)
     
@@ -155,11 +155,11 @@ def create_reversan_summary_plot(results, output_dir):
     if 'runs_threads' in results:
         threads_data = results['runs_threads']
         threads = [run['threads'] for run in threads_data]
-        times = [extract_metrics_from_run(run)['elapsed_seconds'] for run in threads_data]
+        times = [extract_metrics_from_run(run)['user_seconds'] for run in threads_data]
         ax2.plot(threads, times, marker='s', color='tab:green', linewidth=2)
         ax2.set_xlabel('Thread Count')
-        ax2.set_ylabel('Time (seconds)')
-        ax2.set_title('Performance vs Threads')
+        ax2.set_ylabel('CPU Time (seconds)')
+        ax2.set_title('CPU Time vs Threads')
         ax2.grid(True, alpha=0.3)
         ax2.set_xticks(threads)
     
@@ -604,6 +604,230 @@ def create_llama_summary_plot(results, output_dir):
     plt.savefig(os.path.join(output_dir, 'llama_benchmark_summary.svg'), bbox_inches='tight')
     plt.close()
 
+def plot_blender_results(results, output_dir):
+    """Plot Blender benchmark results."""
+    print("📊 Plotting Blender results...")
+    
+    # Plot CPU vs GPU performance comparison
+    plot_blender_performance_comparison(results, output_dir)
+    
+    # Create summary plot
+    create_blender_summary_plot(results, output_dir)
+
+def plot_blender_performance_comparison(results, output_dir):
+    """Plot Blender CPU vs GPU performance comparison."""
+    cpu_runs = results.get('runs_cpu', [])
+    gpu_runs = results.get('runs_gpu', [])
+    
+    if not cpu_runs and not gpu_runs:
+        print("⚠️  No benchmark runs found for Blender")
+        return
+    
+    # Extract scene data
+    scenes = ['monster', 'junkshop', 'classroom']
+    cpu_scores = []
+    gpu_scores = []
+    
+    # Get CPU scores
+    cpu_data = cpu_runs[0] if cpu_runs and cpu_runs[0].get('success') else None
+    if cpu_data and 'scenes' in cpu_data:
+        for scene in scenes:
+            score = cpu_data['scenes'].get(scene, {}).get('samples_per_minute', 0)
+            cpu_scores.append(score)
+    else:
+        cpu_scores = [0] * len(scenes)
+    
+    # Get GPU scores
+    gpu_data = gpu_runs[0] if gpu_runs and gpu_runs[0].get('success') else None
+    if gpu_data and 'scenes' in gpu_data:
+        for scene in scenes:
+            score = gpu_data['scenes'].get(scene, {}).get('samples_per_minute', 0)
+            gpu_scores.append(score)
+    else:
+        gpu_scores = [0] * len(scenes)
+    
+    # Create comparison plot
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    
+    x = np.arange(len(scenes))
+    width = 0.35
+    
+    # Scene-by-scene comparison
+    bars1 = ax1.bar(x - width/2, cpu_scores, width, label='CPU', color='tab:blue', alpha=0.8)
+    if any(s > 0 for s in gpu_scores):
+        bars2 = ax1.bar(x + width/2, gpu_scores, width, label='GPU', color='tab:red', alpha=0.8)
+    
+    ax1.set_xlabel('Benchmark Scene')
+    ax1.set_ylabel('Samples per Minute')
+    ax1.set_title('Blender Rendering Performance by Scene')
+    ax1.set_xticks(x)
+    ax1.set_xticklabels([s.title() for s in scenes])
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+    
+    # Add value labels on bars
+    for i, (cpu_val, gpu_val) in enumerate(zip(cpu_scores, gpu_scores)):
+        if cpu_val > 0:
+            ax1.text(i - width/2, cpu_val + max(cpu_scores + gpu_scores) * 0.01,
+                    f'{cpu_val:.1f}', ha='center', va='bottom', fontsize=9)
+        if gpu_val > 0:
+            ax1.text(i + width/2, gpu_val + max(cpu_scores + gpu_scores) * 0.01,
+                    f'{gpu_val:.1f}', ha='center', va='bottom', fontsize=9)
+    
+    # Total scores comparison
+    cpu_total = sum(cpu_scores)
+    gpu_total = sum(gpu_scores)
+    
+    totals = []
+    labels = []
+    colors = []
+    
+    if cpu_total > 0:
+        totals.append(cpu_total)
+        labels.append('CPU Total')
+        colors.append('tab:blue')
+    
+    if gpu_total > 0:
+        totals.append(gpu_total)
+        labels.append('GPU Total')
+        colors.append('tab:red')
+    
+    if totals:
+        bars = ax2.bar(labels, totals, color=colors, alpha=0.8)
+        ax2.set_ylabel('Total Samples per Minute')
+        ax2.set_title('Total Rendering Performance')
+        ax2.grid(True, alpha=0.3)
+        
+        # Add value labels
+        for bar, total in zip(bars, totals):
+            ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + max(totals) * 0.01,
+                    f'{total:.1f}', ha='center', va='bottom', fontweight='bold')
+        
+        # Add speedup annotation if both exist
+        if len(totals) == 2 and cpu_total > 0:
+            speedup = gpu_total / cpu_total
+            ax2.text(0.5, 0.95, f'GPU Speedup: {speedup:.2f}x', 
+                    transform=ax2.transAxes, ha='center', va='top',
+                    bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+    
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, 'blender_performance_comparison.png'), dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(output_dir, 'blender_performance_comparison.svg'), bbox_inches='tight')
+    plt.close()
+
+def create_blender_summary_plot(results, output_dir):
+    """Create a summary plot for Blender results."""
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
+    
+    cpu_runs = results.get('runs_cpu', [])
+    gpu_runs = results.get('runs_gpu', [])
+    
+    # Scene performance breakdown
+    scenes = ['monster', 'junkshop', 'classroom']
+    cpu_scores = []
+    gpu_scores = []
+    
+    cpu_data = cpu_runs[0] if cpu_runs and cpu_runs[0].get('success') else None
+    if cpu_data and 'scenes' in cpu_data:
+        for scene in scenes:
+            score = cpu_data['scenes'].get(scene, {}).get('samples_per_minute', 0)
+            cpu_scores.append(score)
+    else:
+        cpu_scores = [0] * len(scenes)
+    
+    gpu_data = gpu_runs[0] if gpu_runs and gpu_runs[0].get('success') else None
+    if gpu_data and 'scenes' in gpu_data:
+        for scene in scenes:
+            score = gpu_data['scenes'].get(scene, {}).get('samples_per_minute', 0)
+            gpu_scores.append(score)
+    else:
+        gpu_scores = [0] * len(scenes)
+    
+    # Plot 1: CPU Performance by Scene
+    if any(s > 0 for s in cpu_scores):
+        ax1.bar(scenes, cpu_scores, color='tab:blue', alpha=0.8)
+        ax1.set_title('CPU Rendering Performance')
+        ax1.set_ylabel('Samples per Minute')
+        ax1.set_xticklabels([s.title() for s in scenes])
+        for i, score in enumerate(cpu_scores):
+            if score > 0:
+                ax1.text(i, score + max(cpu_scores) * 0.01, f'{score:.1f}', 
+                        ha='center', va='bottom', fontsize=9)
+    else:
+        ax1.text(0.5, 0.5, 'No CPU results available', ha='center', va='center', transform=ax1.transAxes)
+        ax1.set_title('CPU Performance - No Data')
+    
+    # Plot 2: GPU Performance by Scene
+    if any(s > 0 for s in gpu_scores):
+        ax2.bar(scenes, gpu_scores, color='tab:red', alpha=0.8)
+        ax2.set_title('GPU Rendering Performance')
+        ax2.set_ylabel('Samples per Minute')
+        ax2.set_xticklabels([s.title() for s in scenes])
+        for i, score in enumerate(gpu_scores):
+            if score > 0:
+                ax2.text(i, score + max(gpu_scores) * 0.01, f'{score:.1f}', 
+                        ha='center', va='bottom', fontsize=9)
+    else:
+        ax2.text(0.5, 0.5, 'No GPU results available', ha='center', va='center', transform=ax2.transAxes)
+        ax2.set_title('GPU Performance - No Data')
+    
+    # Plot 3: Benchmark Information
+    ax3.axis('off')
+    ax3.set_title('Benchmark Information')
+    
+    info_lines = []
+    if cpu_data:
+        info_lines.append(f"Blender Version: {cpu_data.get('blender_version', 'Unknown')}")
+        info_lines.append(f"CPU Device: {cpu_data.get('detected_device', 'Unknown')}")
+        info_lines.append(f"CPU Total Score: {cpu_data.get('total_score', 0):.1f} spm")
+    
+    if gpu_data:
+        info_lines.append(f"GPU Device: {gpu_data.get('detected_device', 'Unknown')}")
+        info_lines.append(f"GPU Total Score: {gpu_data.get('total_score', 0):.1f} spm")
+        
+        if cpu_data and cpu_data.get('total_score', 0) > 0:
+            speedup = gpu_data.get('total_score', 0) / cpu_data.get('total_score', 1)
+            info_lines.append(f"GPU Speedup: {speedup:.2f}x")
+    
+    # Add timing information
+    cpu_time = cpu_runs[0].get('elapsed_seconds', 0) if cpu_runs else 0
+    gpu_time = gpu_runs[0].get('elapsed_seconds', 0) if gpu_runs else 0
+    if cpu_time > 0:
+        info_lines.append(f"CPU Benchmark Time: {cpu_time:.1f}s")
+    if gpu_time > 0:
+        info_lines.append(f"GPU Benchmark Time: {gpu_time:.1f}s")
+    
+    info_text = '\n'.join(info_lines)
+    ax3.text(0.05, 0.95, info_text, transform=ax3.transAxes, fontsize=10,
+            verticalalignment='top', fontfamily='monospace')
+    
+    # Plot 4: Performance Comparison
+    if any(s > 0 for s in cpu_scores + gpu_scores):
+        x = np.arange(len(scenes))
+        width = 0.35
+        
+        if any(s > 0 for s in cpu_scores):
+            ax4.bar(x - width/2, cpu_scores, width, label='CPU', color='tab:blue', alpha=0.8)
+        if any(s > 0 for s in gpu_scores):
+            ax4.bar(x + width/2, gpu_scores, width, label='GPU', color='tab:red', alpha=0.8)
+        
+        ax4.set_xlabel('Scene')
+        ax4.set_ylabel('Samples per Minute')
+        ax4.set_title('Direct Performance Comparison')
+        ax4.set_xticks(x)
+        ax4.set_xticklabels([s.title() for s in scenes])
+        if any(s > 0 for s in cpu_scores) and any(s > 0 for s in gpu_scores):
+            ax4.legend()
+    else:
+        ax4.text(0.5, 0.5, 'No benchmark data available', ha='center', va='center', transform=ax4.transAxes)
+        ax4.set_title('Performance Comparison - No Data')
+    
+    plt.suptitle('Blender Benchmark Summary', fontsize=16, fontweight='bold')
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, 'blender_benchmark_summary.png'), dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(output_dir, 'blender_benchmark_summary.svg'), bbox_inches='tight')
+    plt.close()
+
 def main():
     """Main function."""
     if len(sys.argv) > 1:
@@ -624,8 +848,10 @@ def main():
         individual_files = [
             ("reversan_results.json", "Reversan"),
             ("llama_results.json", "Llama"),
+            ("blender_results.json", "Blender"),
             ("results/reversan_results.json", "Reversan"),
-            ("results/llama_results.json", "Llama")
+            ("results/llama_results.json", "Llama"),
+            ("results/blender_results.json", "Blender")
         ]
         
         found_files = []
@@ -699,8 +925,13 @@ def process_single_results_file(results):
         plot_reversan_results(results, OUTPUT_DIR)
         
     elif "runs_cpu" in results or "runs_gpu" in results or "build" in results:
-        # Llama results format
-        plot_llama_results(results, OUTPUT_DIR)
+        # Check if it's Blender or Llama format
+        if results.get("meta", {}).get("benchmark_name") == "blender":
+            # Blender results format
+            plot_blender_results(results, OUTPUT_DIR)
+        else:
+            # Llama results format
+            plot_llama_results(results, OUTPUT_DIR)
         
     else:
         print("⚠️  Unknown results format, skipping...")
