@@ -13,7 +13,6 @@ from typing import Dict, Any, List
 from benchmarks.reversan import ReversanBenchmark
 from benchmarks.llama import LlamaBenchmark
 from benchmarks.sevenzip import SevenZipBenchmark
-from benchmarks.blender import BlenderBenchmark
 
 
 class BenchmarkRunner:
