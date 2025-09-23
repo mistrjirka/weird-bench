@@ -77,6 +77,11 @@ class BaseBenchmark(ABC):
         """Run a command and return the result."""
         return subprocess.run(cmd, cwd=cwd, check=check, capture_output=capture_output, text=True)
     
+    def run_command_with_env(self, cmd: List[str], env: Dict[str, str], cwd: Optional[str] = None, 
+                           check: bool = True, capture_output: bool = True) -> subprocess.CompletedProcess:
+        """Run a command with custom environment variables and return the result."""
+        return subprocess.run(cmd, cwd=cwd, check=check, capture_output=capture_output, text=True, env=env)
+    
     def measure_time_and_run(self, func, *args, **kwargs):
         """Measure execution time of a function."""
         start_time = time.perf_counter()

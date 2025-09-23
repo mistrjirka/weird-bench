@@ -25,6 +25,23 @@ class ReversanBenchmark(BaseBenchmark):
         self.gnu_time = self._find_gnu_time()
         self.results["meta"]["gnu_time"] = bool(self.gnu_time)
         self.results["meta"]["repo"] = self.repo_url
+        
+        # Generate unique build ID for cold builds
+        import uuid
+        self.build_id = str(uuid.uuid4())[:8]
+    
+    def _get_cold_build_env(self) -> Dict[str, str]:
+        """Get environment variables that ensure cold builds (no caching)."""
+        env = os.environ.copy()
+        # Disable ccache globally
+        env['CCACHE_DISABLE'] = '1'
+        # Disable other potential caches
+        env['CCACHE_DIR'] = '/dev/null'
+        env['CCACHE_NOSTATS'] = '1'
+        # Force empty launcher to override toolchain defaults
+        env['CMAKE_C_COMPILER_LAUNCHER'] = ''
+        env['CMAKE_CXX_COMPILER_LAUNCHER'] = ''
+        return env
     
     def _find_gnu_time(self) -> Optional[str]:
         """Find GNU time command."""
@@ -55,13 +72,18 @@ class ReversanBenchmark(BaseBenchmark):
         
         print("Configuring CMake…")
         config_start = time.perf_counter()
-        self.run_command(["cmake", "-S", ".", "-B", "build", "-DCMAKE_BUILD_TYPE=Release"], 
-                        cwd=self.project_dir)
+        config_cmd = [
+            "cmake", "-S", ".", "-B", "build", "-DCMAKE_BUILD_TYPE=Release",
+            f"-DCMAKE_C_FLAGS=-DWEIRD_BENCH_BUILD_ID={self.build_id}",
+            f"-DCMAKE_CXX_FLAGS=-DWEIRD_BENCH_BUILD_ID={self.build_id}"
+        ]
+        self.run_command_with_env(config_cmd, self._get_cold_build_env(), cwd=self.project_dir)
         config_time = time.perf_counter() - config_start
         
         print("Building…")
         build_start = time.perf_counter()
-        self.run_command(["cmake", "--build", "build", "-j"], cwd=self.project_dir)
+        build_cmd = ["cmake", "--build", "build", "-j"]
+        self.run_command_with_env(build_cmd, self._get_cold_build_env(), cwd=self.project_dir)
         build_time = time.perf_counter() - build_start
         
         total_compile_time = config_time + build_time

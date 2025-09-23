@@ -31,7 +31,7 @@ class CompilationToolbox:
         """Ensure build directory exists."""
         os.makedirs(self.build_dir, exist_ok=True)
     
-    def measure_build_phase(self, phase_name: str, cmd: List[str], cwd: str) -> tuple[float, subprocess.CompletedProcess]:
+    def measure_build_phase(self, phase_name: str, cmd: List[str], cwd: str, env: Optional[Dict[str, str]] = None) -> tuple[float, subprocess.CompletedProcess]:
         """Measure the time for a build phase and return timing + result."""
         print(f"⚙️  {phase_name}...")
         print(f"🔧 Command: {' '.join(cmd)}")
@@ -46,7 +46,8 @@ class CompilationToolbox:
                 stderr=subprocess.STDOUT, 
                 text=True, 
                 bufsize=1, 
-                universal_newlines=True
+                universal_newlines=True,
+                env=env
             )
             
             stdout_lines = []
@@ -77,7 +78,7 @@ class CompilationToolbox:
             result = BuildResult(process.returncode, '\n'.join(stdout_lines))
         else:
             # For config commands, use regular capture
-            result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+            result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, env=env)
         
         elapsed_time = time.perf_counter() - start_time
         print(f"✅ {phase_name} completed in {elapsed_time:.2f}s")
@@ -85,7 +86,7 @@ class CompilationToolbox:
         return elapsed_time, result
     
     def build_variant_with_timing(self, variant_name: str, cmake_config_cmd: List[str], 
-                                 error_handler=None, setup_callback=None) -> Dict[str, float]:
+                                 error_handler=None, setup_callback=None, env: Optional[Dict[str, str]] = None) -> Dict[str, float]:
         """Build a variant with detailed timing and error handling."""
         print(f"🔨 Building {variant_name} variant...")
         
@@ -100,7 +101,8 @@ class CompilationToolbox:
         config_time, config_result = self.measure_build_phase(
             f"Configuring {variant_name} build", 
             cmake_config_cmd, 
-            self.project_dir
+            self.project_dir,
+            env
         )
         
         if config_result.returncode != 0:
@@ -115,7 +117,8 @@ class CompilationToolbox:
         build_time, build_result = self.measure_build_phase(
             f"Building {variant_name} (using {num_jobs} jobs)", 
             build_cmd, 
-            self.project_dir
+            self.project_dir,
+            env
         )
         
         if build_result.returncode != 0:
@@ -152,6 +155,23 @@ class LlamaBenchmark(BaseBenchmark):
         
         self.results["meta"]["repo"] = self.repo_url
         self.results["meta"]["model_url"] = self.model_url
+        
+        # Generate unique build ID for cold builds
+        import uuid
+        self.build_id = str(uuid.uuid4())[:8]
+    
+    def _get_cold_build_env(self) -> Dict[str, str]:
+        """Get environment variables that ensure cold builds (no caching)."""
+        env = os.environ.copy()
+        # Disable ccache globally
+        env['CCACHE_DISABLE'] = '1'
+        # Disable other potential caches
+        env['CCACHE_DIR'] = '/dev/null'
+        env['CCACHE_NOSTATS'] = '1'
+        # Force empty launcher to override toolchain defaults
+        env['CMAKE_C_COMPILER_LAUNCHER'] = ''
+        env['CMAKE_CXX_COMPILER_LAUNCHER'] = ''
+        return env
     
     def _check_dependencies(self) -> None:
         """Check for required system dependencies."""
@@ -306,9 +326,13 @@ class LlamaBenchmark(BaseBenchmark):
         # Configure CPU build
         print("⚙️  Configuring CPU build...")
         config_start = time.perf_counter()
-        config_cmd = ["cmake", "-B", "build_cpu", "-DCMAKE_BUILD_TYPE=Release"]
+        config_cmd = [
+            "cmake", "-B", "build_cpu", "-DCMAKE_BUILD_TYPE=Release",
+            f"-DCMAKE_C_FLAGS=-DWEIRD_BENCH_BUILD_ID={self.build_id}",
+            f"-DCMAKE_CXX_FLAGS=-DWEIRD_BENCH_BUILD_ID={self.build_id}"
+        ]
         print(f"🔧 Command: {' '.join(config_cmd)}")
-        config_result = subprocess.run(config_cmd, cwd=self.project_dir, text=True)
+        config_result = subprocess.run(config_cmd, cwd=self.project_dir, text=True, env=self._get_cold_build_env())
         config_time = time.perf_counter() - config_start
         
         if config_result.returncode != 0:
@@ -330,7 +354,8 @@ class LlamaBenchmark(BaseBenchmark):
             stderr=subprocess.STDOUT, 
             text=True, 
             bufsize=1, 
-            universal_newlines=True
+            universal_newlines=True,
+            env=self._get_cold_build_env()
         )
         
         line_count = 0
@@ -368,9 +393,13 @@ class LlamaBenchmark(BaseBenchmark):
         
         # Configure Vulkan build
         print("⚙️  Configuring Vulkan build...")
-        config_cmd = ["cmake", "-B", "build_vulkan", "-DGGML_VULKAN=ON", "-DCMAKE_BUILD_TYPE=Release"]
+        config_cmd = [
+            "cmake", "-B", "build_vulkan", "-DGGML_VULKAN=ON", "-DCMAKE_BUILD_TYPE=Release",
+            f"-DCMAKE_C_FLAGS=-DWEIRD_BENCH_BUILD_ID={self.build_id}",
+            f"-DCMAKE_CXX_FLAGS=-DWEIRD_BENCH_BUILD_ID={self.build_id}"
+        ]
         print(f"🔧 Command: {' '.join(config_cmd)}")
-        config_result = subprocess.run(config_cmd, cwd=self.project_dir, text=True)
+        config_result = subprocess.run(config_cmd, cwd=self.project_dir, text=True, env=self._get_cold_build_env())
         
         if config_result.returncode != 0:
             raise subprocess.CalledProcessError(config_result.returncode, config_cmd)
@@ -390,7 +419,8 @@ class LlamaBenchmark(BaseBenchmark):
             stderr=subprocess.STDOUT, 
             text=True, 
             bufsize=1, 
-            universal_newlines=True
+            universal_newlines=True,
+            env=self._get_cold_build_env()
         )
         
         line_count = 0
