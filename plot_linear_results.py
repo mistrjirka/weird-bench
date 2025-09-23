@@ -615,85 +615,90 @@ def plot_blender_results(results, output_dir):
     create_blender_summary_plot(results, output_dir)
 
 def plot_blender_performance_comparison(results, output_dir):
-    """Plot Blender CPU vs GPU performance comparison."""
-    cpu_runs = results.get('runs_cpu', [])
-    gpu_runs = results.get('runs_gpu', [])
+    """Plot Blender performance comparison across devices."""
+    device_runs = results.get('device_runs', [])
     
-    if not cpu_runs and not gpu_runs:
-        print("⚠️  No benchmark runs found for Blender")
+    if not device_runs:
+        print("⚠️  No device runs found for Blender")
         return
     
-    # Extract scene data
+    # Extract successful runs
+    successful_runs = [run for run in device_runs if run.get('success', False)]
+    if not successful_runs:
+        print("⚠️  No successful benchmark runs found for Blender")
+        return
+    
+    # Extract scene data from JSON results
     scenes = ['monster', 'junkshop', 'classroom']
-    cpu_scores = []
-    gpu_scores = []
+    device_data = {}
     
-    # Get CPU scores
-    cpu_data = cpu_runs[0] if cpu_runs and cpu_runs[0].get('success') else None
-    if cpu_data and 'scenes' in cpu_data:
-        for scene in scenes:
-            score = cpu_data['scenes'].get(scene, {}).get('samples_per_minute', 0)
-            cpu_scores.append(score)
-    else:
-        cpu_scores = [0] * len(scenes)
+    for run in successful_runs:
+        device_name = run.get('device_name', 'Unknown Device')
+        framework = run.get('device_framework', 'Unknown')
+        device_label = f"{device_name} ({framework})"
+        
+        # Extract scores from raw JSON data
+        scene_scores = {}
+        raw_json = run.get('raw_json', [])
+        
+        for scene_result in raw_json:
+            scene_label = scene_result.get('scene', {}).get('label', '').lower()
+            if scene_label in scenes:
+                samples_per_minute = scene_result.get('stats', {}).get('samples_per_minute', 0)
+                scene_scores[scene_label] = samples_per_minute
+        
+        device_data[device_label] = scene_scores
     
-    # Get GPU scores
-    gpu_data = gpu_runs[0] if gpu_runs and gpu_runs[0].get('success') else None
-    if gpu_data and 'scenes' in gpu_data:
-        for scene in scenes:
-            score = gpu_data['scenes'].get(scene, {}).get('samples_per_minute', 0)
-            gpu_scores.append(score)
-    else:
-        gpu_scores = [0] * len(scenes)
+    if not device_data:
+        print("⚠️  No scene data found in Blender results")
+        return
     
     # Create comparison plot
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
-    
-    x = np.arange(len(scenes))
-    width = 0.35
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 8))
     
     # Scene-by-scene comparison
-    bars1 = ax1.bar(x - width/2, cpu_scores, width, label='CPU', color='tab:blue', alpha=0.8)
-    if any(s > 0 for s in gpu_scores):
-        bars2 = ax1.bar(x + width/2, gpu_scores, width, label='GPU', color='tab:red', alpha=0.8)
+    x = np.arange(len(scenes))
+    device_labels = list(device_data.keys())
+    num_devices = len(device_labels)
+    width = 0.8 / num_devices  # Dynamic width based on number of devices
+    
+    colors = plt.cm.Set1(np.linspace(0, 1, num_devices))
+    
+    for i, (device_label, scene_scores) in enumerate(device_data.items()):
+        scores = [scene_scores.get(scene, 0) for scene in scenes]
+        offset = (i - num_devices/2 + 0.5) * width
+        bars = ax1.bar(x + offset, scores, width, label=device_label, 
+                      color=colors[i], alpha=0.8)
+        
+        # Add value labels on bars
+        max_score = max([max(device_data[dev].values()) for dev in device_data])
+        for j, score in enumerate(scores):
+            if score > 0:
+                ax1.text(j + offset, score + max_score * 0.01,
+                        f'{score:.1f}', ha='center', va='bottom', fontsize=8)
     
     ax1.set_xlabel('Benchmark Scene')
     ax1.set_ylabel('Samples per Minute')
     ax1.set_title('Blender Rendering Performance by Scene')
     ax1.set_xticks(x)
     ax1.set_xticklabels([s.title() for s in scenes])
-    ax1.legend()
+    ax1.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
     ax1.grid(True, alpha=0.3)
     
-    # Add value labels on bars
-    for i, (cpu_val, gpu_val) in enumerate(zip(cpu_scores, gpu_scores)):
-        if cpu_val > 0:
-            ax1.text(i - width/2, cpu_val + max(cpu_scores + gpu_scores) * 0.01,
-                    f'{cpu_val:.1f}', ha='center', va='bottom', fontsize=9)
-        if gpu_val > 0:
-            ax1.text(i + width/2, gpu_val + max(cpu_scores + gpu_scores) * 0.01,
-                    f'{gpu_val:.1f}', ha='center', va='bottom', fontsize=9)
-    
     # Total scores comparison
-    cpu_total = sum(cpu_scores)
-    gpu_total = sum(gpu_scores)
-    
     totals = []
     labels = []
-    colors = []
+    colors_total = []
     
-    if cpu_total > 0:
-        totals.append(cpu_total)
-        labels.append('CPU Total')
-        colors.append('tab:blue')
-    
-    if gpu_total > 0:
-        totals.append(gpu_total)
-        labels.append('GPU Total')
-        colors.append('tab:red')
+    for i, (device_label, scene_scores) in enumerate(device_data.items()):
+        total = sum(scene_scores.values())
+        if total > 0:
+            totals.append(total)
+            labels.append(device_label.split('(')[0].strip())  # Shorter labels
+            colors_total.append(colors[i])
     
     if totals:
-        bars = ax2.bar(labels, totals, color=colors, alpha=0.8)
+        bars = ax2.bar(labels, totals, color=colors_total, alpha=0.8)
         ax2.set_ylabel('Total Samples per Minute')
         ax2.set_title('Total Rendering Performance')
         ax2.grid(True, alpha=0.3)
@@ -703,12 +708,28 @@ def plot_blender_performance_comparison(results, output_dir):
             ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + max(totals) * 0.01,
                     f'{total:.1f}', ha='center', va='bottom', fontweight='bold')
         
-        # Add speedup annotation if both exist
-        if len(totals) == 2 and cpu_total > 0:
-            speedup = gpu_total / cpu_total
-            ax2.text(0.5, 0.95, f'GPU Speedup: {speedup:.2f}x', 
-                    transform=ax2.transAxes, ha='center', va='top',
-                    bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+        # Add speedup annotations relative to CPU if available
+        cpu_total = None
+        for device_label, scene_scores in device_data.items():
+            if 'CPU' in device_label:
+                cpu_total = sum(scene_scores.values())
+                break
+        
+        if cpu_total and cpu_total > 0 and len(totals) > 1:
+            speedup_text = []
+            for device_label, scene_scores in device_data.items():
+                if 'CPU' not in device_label:
+                    device_total = sum(scene_scores.values())
+                    if device_total > 0:
+                        speedup = device_total / cpu_total
+                        device_short = device_label.split('(')[0].strip()
+                        speedup_text.append(f'{device_short}: {speedup:.2f}x')
+            
+            if speedup_text:
+                ax2.text(0.02, 0.98, 'Speedup vs CPU:\n' + '\n'.join(speedup_text), 
+                        transform=ax2.transAxes, ha='left', va='top',
+                        bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8),
+                        fontsize=9)
     
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, 'blender_performance_comparison.png'), dpi=300, bbox_inches='tight')
@@ -717,110 +738,144 @@ def plot_blender_performance_comparison(results, output_dir):
 
 def create_blender_summary_plot(results, output_dir):
     """Create a summary plot for Blender results."""
-    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(18, 12))
     
-    cpu_runs = results.get('runs_cpu', [])
-    gpu_runs = results.get('runs_gpu', [])
+    device_runs = results.get('device_runs', [])
+    successful_runs = [run for run in device_runs if run.get('success', False)]
     
-    # Scene performance breakdown
+    if not successful_runs:
+        # No data available
+        for ax in [ax1, ax2, ax3, ax4]:
+            ax.text(0.5, 0.5, 'No successful benchmark runs available', 
+                   ha='center', va='center', transform=ax.transAxes, fontsize=12)
+            ax.set_title('No Data Available')
+        plt.tight_layout()
+        plt.savefig(os.path.join(output_dir, 'blender_benchmark_summary.png'), dpi=300, bbox_inches='tight')
+        plt.close()
+        return
+    
+    # Extract device data
     scenes = ['monster', 'junkshop', 'classroom']
-    cpu_scores = []
-    gpu_scores = []
+    device_data = {}
     
-    cpu_data = cpu_runs[0] if cpu_runs and cpu_runs[0].get('success') else None
-    if cpu_data and 'scenes' in cpu_data:
-        for scene in scenes:
-            score = cpu_data['scenes'].get(scene, {}).get('samples_per_minute', 0)
-            cpu_scores.append(score)
-    else:
-        cpu_scores = [0] * len(scenes)
+    for run in successful_runs:
+        device_name = run.get('device_name', 'Unknown Device')
+        framework = run.get('device_framework', 'Unknown')
+        device_label = f"{device_name} ({framework})"
+        
+        # Extract scores from raw JSON data
+        scene_scores = {}
+        raw_json = run.get('raw_json', [])
+        
+        for scene_result in raw_json:
+            scene_label = scene_result.get('scene', {}).get('label', '').lower()
+            if scene_label in scenes:
+                samples_per_minute = scene_result.get('stats', {}).get('samples_per_minute', 0)
+                scene_scores[scene_label] = samples_per_minute
+        
+        device_data[device_label] = scene_scores
     
-    gpu_data = gpu_runs[0] if gpu_runs and gpu_runs[0].get('success') else None
-    if gpu_data and 'scenes' in gpu_data:
-        for scene in scenes:
-            score = gpu_data['scenes'].get(scene, {}).get('samples_per_minute', 0)
-            gpu_scores.append(score)
-    else:
-        gpu_scores = [0] * len(scenes)
+    # Get first device results for individual scene plots
+    device_list = list(device_data.keys())
+    colors = plt.cm.Set1(np.linspace(0, 1, len(device_list)))
     
-    # Plot 1: CPU Performance by Scene
-    if any(s > 0 for s in cpu_scores):
-        ax1.bar(scenes, cpu_scores, color='tab:blue', alpha=0.8)
-        ax1.set_title('CPU Rendering Performance')
-        ax1.set_ylabel('Samples per Minute')
-        ax1.set_xticklabels([s.title() for s in scenes])
-        for i, score in enumerate(cpu_scores):
-            if score > 0:
-                ax1.text(i, score + max(cpu_scores) * 0.01, f'{score:.1f}', 
-                        ha='center', va='bottom', fontsize=9)
-    else:
-        ax1.text(0.5, 0.5, 'No CPU results available', ha='center', va='center', transform=ax1.transAxes)
-        ax1.set_title('CPU Performance - No Data')
+    # Plot 1: First device performance by scene (usually CPU)
+    if device_list:
+        first_device = device_list[0]
+        first_scores = [device_data[first_device].get(scene, 0) for scene in scenes]
+        
+        if any(s > 0 for s in first_scores):
+            ax1.bar(scenes, first_scores, color=colors[0], alpha=0.8)
+            ax1.set_title(f'{first_device.split("(")[0].strip()} Performance')
+            ax1.set_ylabel('Samples per Minute')
+            ax1.set_xticklabels([s.title() for s in scenes])
+            for i, score in enumerate(first_scores):
+                if score > 0:
+                    ax1.text(i, score + max(first_scores) * 0.01, f'{score:.1f}', 
+                            ha='center', va='bottom', fontsize=9)
+        else:
+            ax1.text(0.5, 0.5, f'No {first_device} results', ha='center', va='center', transform=ax1.transAxes)
     
-    # Plot 2: GPU Performance by Scene
-    if any(s > 0 for s in gpu_scores):
-        ax2.bar(scenes, gpu_scores, color='tab:red', alpha=0.8)
-        ax2.set_title('GPU Rendering Performance')
-        ax2.set_ylabel('Samples per Minute')
-        ax2.set_xticklabels([s.title() for s in scenes])
-        for i, score in enumerate(gpu_scores):
-            if score > 0:
-                ax2.text(i, score + max(gpu_scores) * 0.01, f'{score:.1f}', 
-                        ha='center', va='bottom', fontsize=9)
+    # Plot 2: Second device performance (if available)
+    if len(device_list) > 1:
+        second_device = device_list[1]
+        second_scores = [device_data[second_device].get(scene, 0) for scene in scenes]
+        
+        if any(s > 0 for s in second_scores):
+            ax2.bar(scenes, second_scores, color=colors[1], alpha=0.8)
+            ax2.set_title(f'{second_device.split("(")[0].strip()} Performance')
+            ax2.set_ylabel('Samples per Minute')
+            ax2.set_xticklabels([s.title() for s in scenes])
+            for i, score in enumerate(second_scores):
+                if score > 0:
+                    ax2.text(i, score + max(second_scores) * 0.01, f'{score:.1f}', 
+                            ha='center', va='bottom', fontsize=9)
+        else:
+            ax2.text(0.5, 0.5, f'No {second_device} results', ha='center', va='center', transform=ax2.transAxes)
     else:
-        ax2.text(0.5, 0.5, 'No GPU results available', ha='center', va='center', transform=ax2.transAxes)
-        ax2.set_title('GPU Performance - No Data')
+        ax2.text(0.5, 0.5, 'Only one device tested', ha='center', va='center', transform=ax2.transAxes)
+        ax2.set_title('Second Device - N/A')
     
     # Plot 3: Benchmark Information
     ax3.axis('off')
     ax3.set_title('Benchmark Information')
     
     info_lines = []
-    if cpu_data:
-        info_lines.append(f"Blender Version: {cpu_data.get('blender_version', 'Unknown')}")
-        info_lines.append(f"CPU Device: {cpu_data.get('detected_device', 'Unknown')}")
-        info_lines.append(f"CPU Total Score: {cpu_data.get('total_score', 0):.1f} spm")
     
-    if gpu_data:
-        info_lines.append(f"GPU Device: {gpu_data.get('detected_device', 'Unknown')}")
-        info_lines.append(f"GPU Total Score: {gpu_data.get('total_score', 0):.1f} spm")
+    # Extract info from first successful run
+    first_run = successful_runs[0]
+    raw_json = first_run.get('raw_json', [])
+    if raw_json:
+        blender_info = raw_json[0]
+        info_lines.append(f"Blender Version: {blender_info.get('blender_version', {}).get('version', 'Unknown')}")
         
-        if cpu_data and cpu_data.get('total_score', 0) > 0:
-            speedup = gpu_data.get('total_score', 0) / cpu_data.get('total_score', 1)
-            info_lines.append(f"GPU Speedup: {speedup:.2f}x")
+        system_info = blender_info.get('system_info', {})
+        info_lines.append(f"System: {system_info.get('dist_name', 'Unknown')} {system_info.get('dist_version', '')}")
+        info_lines.append(f"CPU Cores: {system_info.get('num_cpu_cores', 'Unknown')}")
+        info_lines.append(f"CPU Threads: {system_info.get('num_cpu_threads', 'Unknown')}")
+    
+    # Add device information
+    info_lines.append("")
+    info_lines.append("Devices Tested:")
+    for device_label, scene_scores in device_data.items():
+        total_score = sum(scene_scores.values())
+        info_lines.append(f"• {device_label}: {total_score:.1f} spm")
     
     # Add timing information
-    cpu_time = cpu_runs[0].get('elapsed_seconds', 0) if cpu_runs else 0
-    gpu_time = gpu_runs[0].get('elapsed_seconds', 0) if gpu_runs else 0
-    if cpu_time > 0:
-        info_lines.append(f"CPU Benchmark Time: {cpu_time:.1f}s")
-    if gpu_time > 0:
-        info_lines.append(f"GPU Benchmark Time: {gpu_time:.1f}s")
+    info_lines.append("")
+    info_lines.append("Benchmark Times:")
+    for run in successful_runs:
+        device_name = run.get('device_name', 'Unknown')
+        framework = run.get('device_framework', 'Unknown')
+        elapsed = run.get('elapsed_seconds', 0)
+        info_lines.append(f"• {device_name} ({framework}): {elapsed:.1f}s")
     
     info_text = '\n'.join(info_lines)
-    ax3.text(0.05, 0.95, info_text, transform=ax3.transAxes, fontsize=10,
+    ax3.text(0.05, 0.95, info_text, transform=ax3.transAxes, fontsize=9,
             verticalalignment='top', fontfamily='monospace')
     
-    # Plot 4: Performance Comparison
-    if any(s > 0 for s in cpu_scores + gpu_scores):
+    # Plot 4: Multi-device comparison
+    if device_data:
         x = np.arange(len(scenes))
-        width = 0.35
+        width = 0.8 / len(device_list)
         
-        if any(s > 0 for s in cpu_scores):
-            ax4.bar(x - width/2, cpu_scores, width, label='CPU', color='tab:blue', alpha=0.8)
-        if any(s > 0 for s in gpu_scores):
-            ax4.bar(x + width/2, gpu_scores, width, label='GPU', color='tab:red', alpha=0.8)
+        for i, (device_label, scene_scores) in enumerate(device_data.items()):
+            scores = [scene_scores.get(scene, 0) for scene in scenes]
+            offset = (i - len(device_list)/2 + 0.5) * width
+            device_short = device_label.split('(')[0].strip()
+            ax4.bar(x + offset, scores, width, label=device_short, 
+                   color=colors[i], alpha=0.8)
         
         ax4.set_xlabel('Scene')
         ax4.set_ylabel('Samples per Minute')
-        ax4.set_title('Direct Performance Comparison')
+        ax4.set_title('Multi-Device Comparison')
         ax4.set_xticks(x)
         ax4.set_xticklabels([s.title() for s in scenes])
-        if any(s > 0 for s in cpu_scores) and any(s > 0 for s in gpu_scores):
-            ax4.legend()
+        ax4.legend()
+        ax4.grid(True, alpha=0.3)
     else:
         ax4.text(0.5, 0.5, 'No benchmark data available', ha='center', va='center', transform=ax4.transAxes)
-        ax4.set_title('Performance Comparison - No Data')
+        ax4.set_title('Multi-Device Comparison - No Data')
     
     plt.suptitle('Blender Benchmark Summary', fontsize=16, fontweight='bold')
     plt.tight_layout()

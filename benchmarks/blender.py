@@ -2,6 +2,7 @@
 """
 Blender benchmark implementation.
 """
+import json
 import os
 import re
 import shutil
@@ -12,17 +13,7 @@ import tarfile
 import urllib.request
 from typing import Dict, Any, List, Optional
 
-try:
-    import pexpect
-except ImportError:
-    print("❌ pexpect not found. Install with: pip install pexpect")
-    sys.exit(1)
-
-try:
-    import pexpect
-except ImportError:
-    print("❌ pexpect not found. Install with: pip install pexpect")
-    sys.exit(1)
+# pexpect no longer needed with the new CLI approach
 
 from .base import BaseBenchmark
 
@@ -93,316 +84,262 @@ class BlenderBenchmark(BaseBenchmark):
             "notes": "Blender benchmark uses pre-built binaries"
         }
     
-    def _run_blender_benchmark(self, device_type: str = "cpu") -> Dict[str, Any]:
-        """Run Blender benchmark handling carriage returns and terminal control sequences."""
-        print(f"Running Blender benchmark on {device_type.upper()}...")
+    def _download_blender(self) -> bool:
+        """Download Blender version if not already available."""
+        print("🔽 Downloading Blender 4.5.0...")
+        
+        try:
+            cmd = [self.launcher_path, "blender", "download", "4.5.0"]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300,
+                                  cwd=os.path.dirname(self.launcher_path))
+            
+            if result.returncode == 0:
+                print("✅ Blender download completed")
+                return True
+            else:
+                print(f"❌ Blender download failed: {result.stderr}")
+                return False
+                
+        except subprocess.TimeoutExpired:
+            print("❌ Blender download timed out")
+            return False
+        except Exception as e:
+            print(f"❌ Blender download error: {e}")
+            return False
+    
+    def _get_available_devices(self) -> List[Dict[str, str]]:
+        """Get list of available devices for benchmarking."""
+        print("🔍 Detecting available devices...")
+        
+        try:
+            cmd = [self.launcher_path, "--blender-version", "4.5.0", "devices"]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60,
+                                  cwd=os.path.dirname(self.launcher_path))
+            
+            if result.returncode != 0:
+                print(f"❌ Failed to get device list: {result.stderr}")
+                return []
+            
+            devices = []
+            lines = result.stdout.strip().split('\n')
+            
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                    
+                # Parse format: "Device Name    Framework"
+                parts = line.rsplit(None, 1)  # Split from right, max 1 split
+                if len(parts) == 2:
+                    device_name, framework = parts
+                    devices.append({
+                        "name": device_name.strip(),
+                        "framework": framework.strip()
+                    })
+                    print(f"📱 Found device: {device_name.strip()} ({framework.strip()})")
+            
+            return devices
+            
+        except subprocess.TimeoutExpired:
+            print("❌ Device detection timed out")
+            return []
+        except Exception as e:
+            print(f"❌ Device detection error: {e}")
+            return []
+    
+    def _run_blender_benchmark(self, device_framework: str, scenes: List[str] = None) -> Dict[str, Any]:
+        """Run Blender benchmark with specific device and scenes using JSON output."""
+        if scenes is None:
+            scenes = ["monster", "junkshop", "classroom"]
+        
+        scenes_str = " ".join(scenes)
+        print(f"🎬 Running benchmark on {device_framework} with scenes: {scenes_str}")
+        
         start_time = time.perf_counter()
         
         try:
-            # Set environment variables to ensure clean terminal behavior
-            env = os.environ.copy()
-            env['TERM'] = 'dumb'  # Use dumb terminal to avoid control sequences
-            env['COLUMNS'] = '80'
-            env['LINES'] = '24'
+            # Build command for JSON output
+            cmd = [
+                self.launcher_path, "benchmark",
+                *scenes,  # Expand scenes list
+                "--blender-version", "4.5.0",
+                "--device-type", device_framework,
+                "--json"
+            ]
             
-            # Spawn with clean environment
-            child = pexpect.spawn(
-                self.launcher_path,
-                cwd=os.path.dirname(self.launcher_path),
-                timeout=30,
-                encoding='utf-8',
-                codec_errors='replace',
-                env=env
-            )
+            print(f"� Running: {' '.join(cmd)}")
             
-            # Disable terminal echo and special processing
-            child.setecho(False)
-            child.delaybeforesend = 0.1
-            
-            print("🚀 Starting Blender benchmark...")
-            
-            # Step 1: Handle version selection
-            print("🔍 Step 1: Waiting for version selection...")
-            try:
-                # Look for the version selection prompt, handling carriage returns
-                index = child.expect([
-                    r'\? Choose a Blender version:',  # The actual prompt
-                    r'Choose a Blender version:',     # Without the question mark
-                    pexpect.TIMEOUT
-                ], timeout=30)
-                
-                if index < 2:  # Found version prompt
-                    print("✅ Found version selection prompt")
-                    # Wait a moment for the prompt to stabilize
-                    time.sleep(1)
-                    child.sendline("")  # Send enter
-                    print("📤 Sent: <ENTER> for default version")
-                else:
-                    print("⚠️ Version selection timeout")
-                    
-            except pexpect.EOF:
-                print("❌ Process ended during version selection")
-                raise Exception("Process ended unexpectedly during version selection")
-            
-            # Step 2: Handle download confirmation
-            print("🔍 Step 2: Waiting for download confirmation...")
-            try:
-                # Look for download prompt, being flexible with the format
-                index = child.expect([
-                    r'No files need to be downloaded, continue\?',
-                    r'download.*continue',
-                    r'continue\?.*\(Y/n\)',
-                    pexpect.TIMEOUT
-                ], timeout=30)
-                
-                if index < 3:  # Found download prompt
-                    print("✅ Found download confirmation prompt")
-                    time.sleep(1)
-                    child.sendline("Y")
-                    print("📤 Sent: Y")
-                else:
-                    print("⚠️ Download confirmation timeout")
-                    
-            except pexpect.EOF:
-                print("❌ Process ended during download confirmation")
-                raise Exception("Process ended unexpectedly during download confirmation")
-            
-            # Step 3: Handle device selection (optional)
-            print("🔍 Step 3: Looking for device selection...")
-            try:
-                # get output
-                time.sleep(2)  # Wait a bit for the prompt to appear
-                # print the output so far for debugging
-                print("📄 Current output:\n", child.before)
-                index = child.expect([
-                    r'\?',
-                    r'Select.*device',
-                    r'monster:',  # Results already started
-                    r'Rendering',
-                    pexpect.TIMEOUT
-                ], timeout=15)
-                
-                if index == 0 or index == 1:  # Device selection found
-                    print("✅ Found device selection")
-                    if device_type.lower() == "gpu":
-                        print("🔽 Selecting GPU...")
-                        child.send("\x1b[B")  # Arrow down
-                        time.sleep(0.5)
-                        child.sendline("")
-                    else:
-                        print("✅ Selecting default (CPU)")
-                        child.sendline("")
-                    print("📤 Device selection sent")
-
-                    
-                elif index == 2 or index == 3:  # Already started
-                    print("ℹ️ Benchmark already started, no device selection needed")
-                else:
-                    print("ℹ️ No device selection prompt found")
-                    
-            except pexpect.EOF:
-                print("ℹ️ Process ended during device selection check")
-            
-            # Step 4: Wait for benchmark completion
-            print("🔍 Step 4: Waiting for benchmark to complete...")
-            time.sleep(2)  # Give some time before starting to read output
-            print("current output:\n", child.before)
-            try:
-                index = child.expect([
-                    r'*Y*'
-                ], timeout=10)
-                print("current output:\n", child.before)
-
-                if index == 0:
-                    print("✅ Found final confirmation prompt")
-                    child.sendline("Y")
-                    print("📤 Sent: Y to finalize benchmark")
-            except pexpect.TIMEOUT:
-                print("ℹ️ No final confirmation prompt found, proceeding...")
-            print("current output:\n", child.before)
-
-            # Collect all output
-            all_output = []
-            benchmark_started = False
-            
-            try:
-                while True:
-                    try:
-                        # Wait for output with generous timeout during benchmark
-                        timeout = 600 if benchmark_started else 30
-                        index = child.expect([
-                            r'monster:.*samples per minute',     # Results line
-                            r'junkshop:.*samples per minute',
-                            r'classroom:.*samples per minute',
-                            r'Rendering.*',                      # Benchmark started
-                            r'.+',                               # Any other output
-                            pexpect.EOF,
-                            pexpect.TIMEOUT
-                        ], timeout=timeout)
-                        
-                        if index <= 4:  # Got some output
-                            output_line = child.after
-                            if output_line:
-                                # Clean up the output line - remove carriage returns and control sequences
-                                clean_line = re.sub(r'\r+', '\n', output_line)
-                                clean_line = re.sub(r'\x1b\[[0-9;]*[mGKH]', '', clean_line)  # Remove ANSI sequences
-                                all_output.append(clean_line)
-                                
-                                print(f"📊 {clean_line.strip()}")
-                                
-                                # Check if benchmark has started
-                                if 'monster:' in clean_line or 'Rendering' in clean_line:
-                                    benchmark_started = True
-                                    print("🏁 Benchmark execution detected!")
-                                    
-                        elif index == 5:  # EOF
-                            print("✅ Process completed (EOF)")
-                            break
-                        else:  # Timeout
-                            if benchmark_started:
-                                print("⏰ Benchmark timed out during execution")
-                            else:
-                                print("⏰ Timed out waiting for benchmark to start")
-                            break
-                            
-                    except pexpect.EOF:
-                        print("✅ Benchmark completed")
-                        break
-                        
-            except KeyboardInterrupt:
-                print("🛑 Benchmark interrupted by user")
-                child.terminate()
-                raise
-            
-            # Wait for process to finish
-            child.close()
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=1200,  # 20 minute timeout
+                                  cwd=os.path.dirname(self.launcher_path))
             
             end_time = time.perf_counter()
             elapsed_time = end_time - start_time
             
-            # Combine all output
-            full_output = ''.join(all_output)
-            
-            # Also get any remaining output from child.before
-            if hasattr(child, 'before') and child.before:
-                full_output += child.before
-            
-            print(f"⏱️ Benchmark completed in {elapsed_time:.1f} seconds")
-            print(f"📄 Output length: {len(full_output)} characters")
-            print(f"🚪 Exit status: {child.exitstatus}")
-            
-            if child.exitstatus != 0:
-                error_msg = f"Process failed with exit status {child.exitstatus}"
-                print(f"❌ {error_msg}")
+            if result.returncode != 0:
+                print(f"❌ Benchmark failed with return code {result.returncode}")
+                print(f"STDERR: {result.stderr}")
                 return {
-                    "device_type": device_type,
+                    "device_framework": device_framework,
+                    "scenes": scenes,
                     "success": False,
-                    "error": error_msg,
-                    "elapsed_seconds": elapsed_time,
-                    "raw_output": full_output
+                    "error": f"Process failed with return code {result.returncode}",
+                    "stderr": result.stderr,
+                    "elapsed_seconds": elapsed_time
                 }
             
-            # Parse results
-            results = self._parse_blender_output(full_output)
-            results.update({
-                "device_type": device_type,
-                "success": True,
-                "elapsed_seconds": elapsed_time,
-                "raw_output": full_output
-            })
+            # Parse JSON output
+            try:
+                json_output = json.loads(result.stdout)
+                print(f"✅ Benchmark completed in {elapsed_time:.1f}s")
+                
+                # Extract scene results
+                scene_results = {}
+                total_score = 0.0
+                
+                if "scenes" in json_output:
+                    for scene_data in json_output["scenes"]:
+                        scene_name = scene_data.get("label", "unknown")
+                        samples_per_minute = scene_data.get("result", {}).get("samples_per_minute", 0.0)
+                        
+                        scene_results[scene_name.lower()] = {
+                            "samples_per_minute": samples_per_minute,
+                            "scene_name": scene_name
+                        }
+                        total_score += samples_per_minute
+                        print(f"📊 {scene_name}: {samples_per_minute:.2f} samples per minute")
+                
+                return {
+                    "device_framework": device_framework,
+                    "scenes": scenes,
+                    "success": True,
+                    "elapsed_seconds": elapsed_time,
+                    "scene_results": scene_results,
+                    "total_score": total_score,
+                    "raw_json": json_output,
+                    "raw_output": result.stdout
+                }
+                
+            except json.JSONDecodeError as e:
+                print(f"❌ Failed to parse JSON output: {e}")
+                print(f"Raw output: {result.stdout[:500]}...")
+                return {
+                    "device_framework": device_framework,
+                    "scenes": scenes,
+                    "success": False,
+                    "error": f"JSON parse error: {e}",
+                    "elapsed_seconds": elapsed_time,
+                    "raw_output": result.stdout
+                }
             
-            print("✅ Benchmark completed successfully!")
-            return results
-            
+        except subprocess.TimeoutExpired:
+            print(f"❌ Benchmark timed out after 20 minutes")
+            return {
+                "device_framework": device_framework,
+                "scenes": scenes,
+                "success": False,
+                "error": "Benchmark timed out after 20 minutes",
+                "elapsed_seconds": 1200
+            }
         except Exception as e:
             end_time = time.perf_counter()
             elapsed_time = end_time - start_time
-            print(f"❌ Blender benchmark failed: {e}")
+            print(f"❌ Benchmark failed: {e}")
             return {
-                "device_type": device_type,
+                "device_framework": device_framework,
+                "scenes": scenes,
                 "success": False,
                 "error": str(e),
                 "elapsed_seconds": elapsed_time
             }
     
     def _parse_blender_output(self, output: str) -> Dict[str, Any]:
-        """Parse Blender benchmark output to extract scene performance metrics."""
-        results = {
+        """Legacy method - now handled directly in _run_blender_benchmark with JSON."""
+        # This method is kept for compatibility but is no longer used
+        # The new CLI approach returns JSON directly
+        return {
             "scenes": {},
-            "total_score": 0.0
+            "total_score": 0.0,
+            "note": "This method is deprecated - JSON parsing is now done in _run_blender_benchmark"
         }
-        
-        # Look for benchmark results in the format:
-        # "monster: 128.419147 samples per minute"
-        # "junkshop: 82.744835 samples per minute"  
-        # "classroom: 62.433857 samples per minute"
-        
-        scene_pattern = r'(\w+):\s*([\d.]+)\s*samples per minute'
-        matches = re.findall(scene_pattern, output, re.IGNORECASE)
-        
-        total_score = 0.0
-        for scene_name, score_str in matches:
-            try:
-                score = float(score_str)
-                results["scenes"][scene_name.lower()] = {
-                    "samples_per_minute": score,
-                    "scene_name": scene_name
-                }
-                total_score += score
-                print(f"📊 {scene_name}: {score:.2f} samples per minute")
-            except ValueError:
-                print(f"⚠️  Could not parse score for {scene_name}: {score_str}")
-        
-        results["total_score"] = total_score
-        
-        # Also try to extract device information
-        device_match = re.search(r'Choose a device: (.+)', output)
-        if device_match:
-            results["detected_device"] = device_match.group(1).strip()
-        
-        # Extract Blender version
-        version_match = re.search(r'Choose a Blender version: ([\d.]+)', output)
-        if version_match:
-            results["blender_version"] = version_match.group(1).strip()
-        
-        return results
     
     def benchmark(self, args: Any = None) -> Dict[str, Any]:
-        """Run Blender benchmarks for both CPU and GPU (if available)."""
+        """Run Blender benchmarks on all available devices."""
         results = {
-            "runs_cpu": [],
-            "runs_gpu": []
+            "device_runs": [],
+            "scenes_tested": ["monster", "junkshop", "classroom"]
         }
         
-        # Always run CPU benchmark
-        print("\n=== Running Blender CPU benchmark ===")
-        cpu_result = self._run_blender_benchmark("cpu")
-        results["runs_cpu"].append(cpu_result)
+        # First, download Blender if needed
+        if not self._download_blender():
+            return {
+                "device_runs": [],
+                "error": "Failed to download Blender",
+                "success": False
+            }
         
-        if cpu_result["success"]:
-            print(f"✅ CPU benchmark completed - Total score: {cpu_result.get('total_score', 0):.2f}")
+        # Get available devices
+        devices = self._get_available_devices()
+        if not devices:
+            print("❌ No devices found for benchmarking")
+            return {
+                "device_runs": [],
+                "error": "No devices detected",
+                "success": False
+            }
+        
+        print(f"🎯 Found {len(devices)} devices to benchmark")
+        
+        # Run benchmark on each device
+        successful_runs = 0
+        for i, device in enumerate(devices, 1):
+            device_name = device["name"]
+            framework = device["framework"]
+            
+            print(f"\n=== Running Blender benchmark {i}/{len(devices)}: {device_name} ({framework}) ===")
+            
+            result = self._run_blender_benchmark(framework)
+            result["device_name"] = device_name
+            result["device_framework"] = framework
+            
+            results["device_runs"].append(result)
+            
+            if result["success"]:
+                successful_runs += 1
+                total_score = result.get("total_score", 0)
+                print(f"✅ {device_name} ({framework}): {total_score:.2f} total samples/min")
+            else:
+                print(f"❌ {device_name} ({framework}) failed: {result.get('error', 'Unknown error')}")
+        
+        # Calculate device comparisons
+        if successful_runs >= 2:
+            print(f"\n📊 Comparing {successful_runs} successful device runs:")
+            
+            # Find CPU baseline for comparison
+            cpu_result = None
+            for result in results["device_runs"]:
+                if result["success"] and result["device_framework"] == "CPU":
+                    cpu_result = result
+                    break
+            
+            if cpu_result:
+                cpu_score = cpu_result.get("total_score", 0)
+                if cpu_score > 0:
+                    for result in results["device_runs"]:
+                        if result["success"] and result["device_framework"] != "CPU":
+                            device_score = result.get("total_score", 0)
+                            speedup = device_score / cpu_score
+                            result["cpu_speedup"] = speedup
+                            device_name = result["device_name"]
+                            framework = result["device_framework"]
+                            print(f"📈 {device_name} ({framework}) vs CPU: {speedup:.2f}x speedup")
+        
+        results["successful_runs"] = successful_runs
+        results["total_devices_tested"] = len(devices)
+        
+        if successful_runs > 0:
+            print(f"\n🎉 Blender benchmark completed: {successful_runs}/{len(devices)} devices successful")
         else:
-            print(f"❌ CPU benchmark failed: {cpu_result.get('error', 'Unknown error')}")
-        
-        # Try GPU benchmark (might fail if no suitable GPU)
-        print("\n=== Running Blender GPU benchmark ===")
-        gpu_result = self._run_blender_benchmark("gpu")
-        results["runs_gpu"].append(gpu_result)
-        
-        if gpu_result["success"]:
-            print(f"✅ GPU benchmark completed - Total score: {gpu_result.get('total_score', 0):.2f}")
-        else:
-            print(f"❌ GPU benchmark failed: {gpu_result.get('error', 'Unknown error')}")
-            print("💡 This is normal if no suitable GPU is available for Blender")
-        
-        # Calculate comparison if both succeeded
-        if cpu_result["success"] and gpu_result["success"]:
-            cpu_score = cpu_result.get("total_score", 0)
-            gpu_score = gpu_result.get("total_score", 0)
-            if cpu_score > 0:
-                speedup = gpu_score / cpu_score
-                results["gpu_vs_cpu_speedup"] = speedup
-                print(f"📈 GPU vs CPU speedup: {speedup:.2f}x")
+            print(f"\n❌ All device benchmarks failed")
         
         return results
 

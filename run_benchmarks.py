@@ -13,6 +13,7 @@ from typing import Dict, Any, List
 from benchmarks.reversan import ReversanBenchmark
 from benchmarks.llama import LlamaBenchmark
 from benchmarks.sevenzip import SevenZipBenchmark
+from benchmarks.blender import BlenderBenchmark
 
 
 class BenchmarkRunner:
@@ -23,7 +24,9 @@ class BenchmarkRunner:
         self.benchmarks = {
             "reversan": ReversanBenchmark,
             "llama": LlamaBenchmark,
-            "7zip": SevenZipBenchmark}
+            "7zip": SevenZipBenchmark,
+            "blender": BlenderBenchmark   
+        }
         os.makedirs(output_dir, exist_ok=True)
     
     def run_benchmark(self, benchmark_name: str, args: Any = None) -> Dict[str, Any]:
@@ -99,10 +102,11 @@ def main():
     
     parser.add_argument(
         "--benchmark", "-b",
-        choices=["reversan", "llama", "7zip", "all"],
+        choices=["reversan", "llama", "7zip", "blender", "all"],
         default="all",
         help="Which benchmark to run: 'reversan' (game engine depth/thread scaling), "
-             "'llama' (LLM inference with build timing), '7zip' (compression performance), or 'all' (all benchmarks)"
+             "'llama' (LLM inference with build timing), '7zip' (compression performance), "
+             "'blender' (3D rendering with device comparison), or 'all' (all benchmarks)"
     )
     
     parser.add_argument(
@@ -155,6 +159,13 @@ def main():
         print("    • Measures compression time, ratio, and thread scaling efficiency")
         print("    • Tests thread counts from 1 to maximum CPU threads")
         print("    • Uses system-installed 7-Zip (p7zip-full package)")
+        print()
+        print("  blender - Blender 3D rendering benchmark")
+        print("    • Downloads official Blender benchmark suite automatically")
+        print("    • Tests all available devices (CPU, GPU with different frameworks)")
+        print("    • Measures samples per minute for: monster, junkshop, classroom scenes")
+        print("    • Automatic device detection and comparative analysis")
+        print("    • Uses Blender 4.5.0 with JSON output for reliable parsing")
         print()
         print("  all - Run all benchmarks (default)")
         print("    • Efficient execution with shared model caching")
