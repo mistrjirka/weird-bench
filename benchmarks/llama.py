@@ -524,8 +524,8 @@ class LlamaBenchmark(BaseBenchmark):
         }
         
         # Limited test configurations as requested
-        prompt_sizes = [512, 1024]
-        generation_sizes = [64, 128]
+        prompt_sizes = [512]
+        generation_sizes = [64]
         
         # CPU benchmarks using CPU build
         if "cpu_bench_binary" in self.results["build"]:
