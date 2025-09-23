@@ -24,8 +24,7 @@ class BenchmarkRunner:
         self.benchmarks = {
             "reversan": ReversanBenchmark,
             "llama": LlamaBenchmark,
-            "blender": BlenderBenchmark
-        }
+            "7zip": SevenZipBenchmark}
         os.makedirs(output_dir, exist_ok=True)
     
     def run_benchmark(self, benchmark_name: str, args: Any = None) -> Dict[str, Any]:
