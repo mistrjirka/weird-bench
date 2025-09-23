@@ -139,7 +139,8 @@ class LlamaBenchmark(BaseBenchmark):
         super().__init__("llama", output_dir)
         self.repo_url = "https://github.com/ggml-org/llama.cpp"
         self.project_dir = os.path.abspath("llama.cpp")
-        self.build_dir = os.path.join(self.project_dir, "build")
+        self.cpu_build_dir = os.path.join(self.project_dir, "build_cpu")
+        self.vulkan_build_dir = os.path.join(self.project_dir, "build_vulkan")
         # Shared models directory above project directory
         self.shared_models_dir = os.path.abspath("models")
         self.project_models_dir = os.path.join(self.project_dir, "models")
@@ -235,42 +236,177 @@ class LlamaBenchmark(BaseBenchmark):
         print(f"✅ Model copied to {self.project_model_path}")
     
     def build(self) -> Dict[str, Any]:
-        """Build Llama.cpp with Vulkan support and return build metrics."""
-        toolbox = CompilationToolbox(self.project_dir, self.build_dir)
+        """Build Llama.cpp with both CPU-only and Vulkan versions."""
         build_results = {}
         
-        # Single Vulkan build configuration (supports both CPU and GPU)
-        print(f"\n{'='*50}")
-        print(f"🚀 Building Vulkan-enabled llama.cpp (supports both CPU and GPU)")
-        print(f"{'='*50}")
+        print(f"\n{'='*60}")
+        print(f"🚀 Building llama.cpp with CPU and Vulkan versions")
+        print(f"{'='*60}")
         
-        cmake_cmd = ["cmake", "-B", "build", "-DGGML_VULKAN=ON", "-DCMAKE_BUILD_TYPE=Release"]
+        # Step 1: Clean environment and setup project once
+        print("🧹 Cleaning build environment...")
+        if os.path.exists(self.project_dir):
+            shutil.rmtree(self.project_dir)
         
+        print("� Setting up project...")
+        self._setup_project_and_copy_model()
+        
+        # Step 2: Build CPU version (with timing)
+        print(f"\n🏗️  Building CPU version (measuring time)...")
         try:
-            # Build with timing, passing setup callback to handle project preparation after clean
-            timing_results = toolbox.build_variant_with_timing(
-                "vulkan", cmake_cmd, self._diagnose_cmake_error, self._setup_project_and_copy_model
-            )
+            cpu_timing = self._build_cpu_version()
+            build_results["cpu_build_timing"] = cpu_timing
             
-            build_results["build_timing"] = timing_results
+            # Find CPU binary
+            cpu_binary = self._find_bench_binary("cpu")
+            build_results["cpu_bench_binary"] = cpu_binary
+            print(f"✅ CPU build successful: {cpu_binary}")
             
-            # Find and test the benchmark binary
-            bench_binary = self._find_bench_binary()
-            build_results["bench_binary"] = bench_binary
+        except Exception as e:
+            print(f"❌ CPU build failed: {e}")
+            build_results["cpu_build_error"] = str(e)
+        
+        # Step 3: Build Vulkan version (without timing, separate directory)
+        print(f"\n🏗️  Building Vulkan version (no timing measurement)...")
+        try:
+            self._build_vulkan_version()
+            
+            # Find Vulkan binary
+            vulkan_binary = self._find_bench_binary("vulkan")
+            build_results["vulkan_bench_binary"] = vulkan_binary
+            build_results["gpu_bench_binary"] = vulkan_binary
+            print(f"✅ Vulkan build successful: {vulkan_binary}")
             
             # Check Vulkan device support
-            vulkan_devices = self._check_vulkan_devices(bench_binary)
+            vulkan_devices = self._check_vulkan_devices(vulkan_binary)
             build_results["vulkan_devices"] = vulkan_devices
             build_results["vulkan_supported"] = len(vulkan_devices) > 0 if vulkan_devices else False
             
         except Exception as e:
             print(f"❌ Vulkan build failed: {e}")
-            build_results["build_error"] = str(e)
-            raise RuntimeError(f"Build failed: {e}")
+            build_results["vulkan_build_error"] = str(e)
+        
+        # Check if at least one build succeeded
+        if not any(key.endswith("_bench_binary") for key in build_results.keys()):
+            raise RuntimeError("All builds failed - cannot locate any benchmark binary")
         
         return build_results
     
-
+    def _build_cpu_version(self) -> Dict[str, float]:
+        """Build CPU-only version with timing."""
+        import multiprocessing
+        num_jobs = min(multiprocessing.cpu_count(), 20)
+        
+        # Configure CPU build
+        print("⚙️  Configuring CPU build...")
+        config_start = time.perf_counter()
+        config_cmd = ["cmake", "-B", "build_cpu", "-DCMAKE_BUILD_TYPE=Release"]
+        print(f"🔧 Command: {' '.join(config_cmd)}")
+        config_result = subprocess.run(config_cmd, cwd=self.project_dir, text=True)
+        config_time = time.perf_counter() - config_start
+        
+        if config_result.returncode != 0:
+            raise subprocess.CalledProcessError(config_result.returncode, config_cmd)
+        
+        print(f"✅ CPU configuration completed in {config_time:.2f}s")
+        
+        # Build CPU version with output
+        print(f"⚙️  Building CPU version (using {num_jobs} jobs)...")
+        build_start = time.perf_counter()
+        build_cmd = ["cmake", "--build", "build_cpu", "--config", "Release", "--", f"-j{num_jobs}"]
+        print(f"🔧 Command: {' '.join(build_cmd)}")
+        
+        # Show build output in real-time
+        process = subprocess.Popen(
+            build_cmd, 
+            cwd=self.project_dir, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.STDOUT, 
+            text=True, 
+            bufsize=1, 
+            universal_newlines=True
+        )
+        
+        line_count = 0
+        while True:
+            output = process.stdout.readline()
+            if output == '' and process.poll() is not None:
+                break
+            if output:
+                line = output.strip()
+                line_count += 1
+                # Show every 10th line or important messages
+                if (line_count % 10 == 0 or 
+                    any(keyword in line for keyword in ["Built target", "Linking", "error:", "Error", "llama-bench", "%"])):
+                    print(f"📈 {line}")
+        
+        process.wait()
+        build_time = time.perf_counter() - build_start
+        
+        if process.returncode != 0:
+            raise subprocess.CalledProcessError(process.returncode, build_cmd)
+        
+        total_time = config_time + build_time
+        print(f"✅ CPU build completed in {total_time:.2f}s (config: {config_time:.2f}s, build: {build_time:.2f}s)")
+        
+        return {
+            "config_time_seconds": config_time,
+            "build_time_seconds": build_time,
+            "total_time_seconds": total_time
+        }
+    
+    def _build_vulkan_version(self) -> None:
+        """Build Vulkan version without timing (using separate directory)."""
+        import multiprocessing
+        num_jobs = min(multiprocessing.cpu_count(), 20)
+        
+        # Configure Vulkan build
+        print("⚙️  Configuring Vulkan build...")
+        config_cmd = ["cmake", "-B", "build_vulkan", "-DGGML_VULKAN=ON", "-DCMAKE_BUILD_TYPE=Release"]
+        print(f"🔧 Command: {' '.join(config_cmd)}")
+        config_result = subprocess.run(config_cmd, cwd=self.project_dir, text=True)
+        
+        if config_result.returncode != 0:
+            raise subprocess.CalledProcessError(config_result.returncode, config_cmd)
+        
+        print("✅ Vulkan configuration completed")
+        
+        # Build Vulkan version with output
+        print(f"⚙️  Building Vulkan version (using {num_jobs} jobs)...")
+        build_cmd = ["cmake", "--build", "build_vulkan", "--config", "Release", "--", f"-j{num_jobs}"]
+        print(f"🔧 Command: {' '.join(build_cmd)}")
+        
+        # Show build output in real-time
+        process = subprocess.Popen(
+            build_cmd, 
+            cwd=self.project_dir, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.STDOUT, 
+            text=True, 
+            bufsize=1, 
+            universal_newlines=True
+        )
+        
+        line_count = 0
+        while True:
+            output = process.stdout.readline()
+            if output == '' and process.poll() is not None:
+                break
+            if output:
+                line = output.strip()
+                line_count += 1
+                # Show every 10th line or important messages
+                if (line_count % 10 == 0 or 
+                    any(keyword in line for keyword in ["Built target", "Linking", "error:", "Error", "llama-bench", "%"])):
+                    print(f"📈 {line}")
+        
+        process.wait()
+        
+        if process.returncode != 0:
+            raise subprocess.CalledProcessError(process.returncode, build_cmd)
+        
+        print("✅ Vulkan build completed")
+    
     
     def _diagnose_cmake_error(self, result: subprocess.CompletedProcess, phase: str, variant_name: str) -> None:
         """Diagnose and report CMake build errors with helpful suggestions."""
@@ -329,11 +465,16 @@ class LlamaBenchmark(BaseBenchmark):
             for line in stdout_lines[-10:]:
                 print(f"  {line}")
     
-    def _find_bench_binary(self) -> str:
-        """Find the llama-bench binary."""
+    def _find_bench_binary(self, build_type: str = "vulkan") -> str:
+        """Find the llama-bench binary in the appropriate build directory."""
+        if build_type == "cpu":
+            build_dir = self.cpu_build_dir
+        else:
+            build_dir = self.vulkan_build_dir
+            
         possible_paths = [
-            os.path.join(self.build_dir, "bin", "llama-bench"),
-            os.path.join(self.build_dir, "llama-bench"),
+            os.path.join(build_dir, "bin", "llama-bench"),
+            os.path.join(build_dir, "llama-bench"),
             os.path.join(self.project_dir, "llama-bench"),
         ]
         
@@ -341,7 +482,7 @@ class LlamaBenchmark(BaseBenchmark):
             if os.path.isfile(path) and os.access(path, os.X_OK):
                 return path
         
-        raise RuntimeError("llama-bench binary not found")
+        raise RuntimeError(f"llama-bench binary not found in {build_type} build directory")
     
     def _check_vulkan_devices(self, bench_binary: str) -> Optional[List[str]]:
         """Check available Vulkan devices by running llama-bench."""
@@ -372,55 +513,71 @@ class LlamaBenchmark(BaseBenchmark):
     
     def benchmark(self, args: Any = None) -> Dict[str, Any]:
         """Run the Llama.cpp benchmarks."""
-        bench_binary = self.results["build"]["bench_binary"]
-        vulkan_supported = self.results["build"]["vulkan_supported"]
+        # Note: We built both versions, but Vulkan build overwrote CPU build
+        # So we need to rebuild CPU version for CPU benchmarks, then use Vulkan for GPU
+        vulkan_supported = self.results["build"].get("vulkan_supported", False)
         
         results = {
             "runs_cpu": [],
             "runs_gpu": [],
         }
         
-        # Define test configurations
-        prompt_sizes = [512, 1024, 2048]
-        generation_sizes = [64, 128, 256]
+        # Limited test configurations as requested
+        prompt_sizes = [512, 1024]
+        generation_sizes = [64, 128]
         
-        # CPU benchmarks (ngl=0)
-        print("\n=== Running CPU benchmarks (ngl=0) ===")
-        for p_size in prompt_sizes:
-            for g_size in generation_sizes:
-                print(f"Running CPU benchmark: prompt={p_size}, generation={g_size}")
+        # CPU benchmarks using CPU build
+        if "cpu_bench_binary" in self.results["build"]:
+            print("\n=== Running CPU benchmarks (using CPU build) ===")
+            try:
+                cpu_binary = self.results["build"]["cpu_bench_binary"]
                 
-                cmd = [
-                    bench_binary,
-                    "-m", self.project_model_path,
-                    "-p", str(p_size),
-                    "-n", str(g_size),
-                    "-ngl", "0"
-                ]
-                
-                result = self._run_benchmark_command(cmd, "cpu", p_size, g_size, 0)
-                results["runs_cpu"].append(result)
-        
-        # GPU benchmarks (ngl=99) - only if Vulkan is supported
-        if vulkan_supported:
-            print("\n=== Running GPU benchmarks (ngl=99) ===")
-            for p_size in prompt_sizes:
-                for g_size in generation_sizes:
-                    print(f"Running GPU benchmark: prompt={p_size}, generation={g_size}")
-                    
-                    cmd = [
-                        bench_binary,
-                        "-m", self.project_model_path,
-                        "-p", str(p_size),
-                        "-n", str(g_size),
-                        "-ngl", "99"
-                    ]
-                    
-                    result = self._run_benchmark_command(cmd, "gpu", p_size, g_size, 99)
-                    results["runs_gpu"].append(result)
+                for p_size in prompt_sizes:
+                    for g_size in generation_sizes:
+                        print(f"Running CPU benchmark: prompt={p_size}, generation={g_size}")
+                        
+                        cmd = [
+                            cpu_binary,
+                            "-m", self.project_model_path,
+                            "-p", str(p_size),
+                            "-n", str(g_size)
+                        ]
+                        
+                        result = self._run_benchmark_command(cmd, "cpu", p_size, g_size, 0)
+                        results["runs_cpu"].append(result)
+            except Exception as e:
+                print(f"❌ Failed CPU benchmarking: {e}")
+                results["cpu_skip_reason"] = "cpu_benchmark_failed"
         else:
-            print("\n=== Skipping GPU benchmarks (Vulkan not supported) ===")
-            results["gpu_skip_reason"] = "vulkan_not_supported"
+            print("\n=== Skipping CPU benchmarks (CPU build failed) ===")
+            results["cpu_skip_reason"] = "cpu_build_failed"
+        
+        # GPU benchmarks using Vulkan build
+        if vulkan_supported and "vulkan_bench_binary" in self.results["build"]:
+            print("\n=== Running GPU benchmarks (using Vulkan build) ===")
+            try:
+                gpu_binary = self.results["build"]["vulkan_bench_binary"]
+                
+                for p_size in prompt_sizes:
+                    for g_size in generation_sizes:
+                        print(f"Running GPU benchmark: prompt={p_size}, generation={g_size}")
+                        
+                        cmd = [
+                            gpu_binary,
+                            "-m", self.project_model_path,
+                            "-p", str(p_size),
+                            "-n", str(g_size)
+                        ]
+                        
+                        result = self._run_benchmark_command(cmd, "gpu", p_size, g_size, 99)
+                        results["runs_gpu"].append(result)
+            except Exception as e:
+                print(f"❌ Failed GPU benchmarking: {e}")
+                results["gpu_skip_reason"] = "gpu_benchmark_failed"
+        else:
+            reason = "vulkan_not_supported" if not vulkan_supported else "vulkan_build_failed"
+            print(f"\n=== Skipping GPU benchmarks ({reason.replace('_', ' ')}) ===")
+            results["gpu_skip_reason"] = reason
         
         return results
     
