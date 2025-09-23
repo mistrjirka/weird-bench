@@ -36,7 +36,7 @@ class BaseBenchmark(ABC):
             self.setup()
             
             # Build phase
-            build_results = self.build()
+            build_results = self.build(args)
             self.results["build"] = build_results
             
             # Benchmark phase
@@ -63,9 +63,9 @@ class BaseBenchmark(ABC):
         pass
     
     @abstractmethod
-    def build(self) -> Dict[str, Any]:
-        """Build the project and return build metrics."""
-        pass
+    def build(self, args: Any = None) -> Dict[str, Any]:
+        """Build the benchmark (if needed). Override in subclasses."""
+        return {}
     
     @abstractmethod
     def benchmark(self, args: Any = None) -> Dict[str, Any]:

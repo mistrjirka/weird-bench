@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import time
+import time
 import tarfile
 import urllib.request
 from typing import Dict, Any, List, Optional
@@ -76,7 +77,7 @@ class BlenderBenchmark(BaseBenchmark):
             if os.path.exists(tar_file):
                 os.remove(tar_file)
     
-    def build(self) -> Dict[str, Any]:
+    def build(self, args: Any = None) -> Dict[str, Any]:
         """No build step needed for Blender benchmark."""
         return {
             "launcher_path": self.launcher_path,
@@ -147,15 +148,37 @@ class BlenderBenchmark(BaseBenchmark):
             print(f"❌ Device detection error: {e}")
             return []
     
-    def _run_blender_benchmark(self, device_framework: str, scenes: List[str] = None) -> Dict[str, Any]:
-        """Run Blender benchmark with specific device and scenes using JSON output."""
+    def _run_blender_benchmark(self, device_framework: str, scenes: List[str] = None, max_retries: int = 3) -> Dict[str, Any]:
+        """Run Blender benchmark with specific device and scenes using JSON output, with retry mechanism."""
         if scenes is None:
             scenes = ["monster", "junkshop", "classroom"]
         
         scenes_str = " ".join(scenes)
         print(f"🎬 Running benchmark on {device_framework} with scenes: {scenes_str}")
         
-        start_time = time.perf_counter()
+        # Retry mechanism
+        for attempt in range(max_retries):
+            if attempt > 0:
+                print(f"🔄 Retry attempt {attempt + 1}/{max_retries} for {device_framework}")
+            
+            start_time = time.perf_counter()
+            result = self._run_single_blender_attempt(device_framework, scenes, start_time)
+            
+            if result["success"]:
+                if attempt > 0:
+                    print(f"✅ {device_framework} succeeded on attempt {attempt + 1}")
+                return result
+            else:
+                print(f"❌ Attempt {attempt + 1} failed: {result.get('error', 'Unknown error')}")
+                if attempt < max_retries - 1:
+                    print(f"⏳ Waiting 5 seconds before retry...")
+                    time.sleep(5)
+        
+        print(f"❌ All {max_retries} attempts failed for {device_framework}")
+        return result  # Return the last failed attempt
+    
+    def _run_single_blender_attempt(self, device_framework: str, scenes: List[str], start_time: float) -> Dict[str, Any]:
+        """Run a single Blender benchmark attempt."""
         
         try:
             # Build command for JSON output
@@ -287,6 +310,20 @@ class BlenderBenchmark(BaseBenchmark):
                 "success": False
             }
         
+        # Filter devices if --no-gpu is specified
+        if args and getattr(args, 'no_gpu', False):
+            original_count = len(devices)
+            devices = [device for device in devices if device["framework"].upper() == "CPU"]
+            print(f"🖥️  CPU-only mode: filtered {original_count} devices to {len(devices)} CPU device(s)")
+            
+            if not devices:
+                print("❌ No CPU devices found for benchmarking")
+                return {
+                    "device_runs": [],
+                    "error": "No CPU devices detected",
+                    "success": False
+                }
+        
         print(f"🎯 Found {len(devices)} devices to benchmark")
         
         # Run benchmark on each device
@@ -297,9 +334,28 @@ class BlenderBenchmark(BaseBenchmark):
             
             print(f"\n=== Running Blender benchmark {i}/{len(devices)}: {device_name} ({framework}) ===")
             
-            result = self._run_blender_benchmark(framework)
+            # Try up to 3 times with retry logic
+            result = None
+            for attempt in range(1, 4):
+                if attempt > 1:
+                    print(f"🔄 Retry attempt {attempt}/3 for {device_name} ({framework})")
+                    time.sleep(2 * attempt)  # Exponential backoff: 2s, 4s, 6s
+                
+                result = self._run_blender_benchmark(framework)
+                
+                if result["success"]:
+                    if attempt > 1:
+                        print(f"✅ Success on attempt {attempt}/3")
+                    break
+                else:
+                    error_msg = result.get('error', 'Unknown error')
+                    print(f"❌ Attempt {attempt}/3 failed: {error_msg}")
+                    if attempt == 3:
+                        print(f"💔 All 3 attempts failed for {device_name} ({framework})")
+            
             result["device_name"] = device_name
             result["device_framework"] = framework
+            result["attempts_made"] = attempt if result["success"] else 3
             
             results["device_runs"].append(result)
             

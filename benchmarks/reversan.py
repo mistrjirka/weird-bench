@@ -49,7 +49,7 @@ class ReversanBenchmark(BaseBenchmark):
         print(f"Cloning {self.repo_url} -> {self.project_dir}")
         self.run_command(["git", "clone", "--depth", "1", self.repo_url, self.project_dir])
     
-    def build(self) -> Dict[str, Any]:
+    def build(self, args: Any = None) -> Dict[str, Any]:
         """Build the Reversan Engine and return build metrics."""
         os.makedirs(self.build_dir, exist_ok=True)
         

@@ -50,7 +50,7 @@ class SevenZipBenchmark(BaseBenchmark):
             print(f"❌ Failed to verify 7-Zip installation: {e}")
             raise
     
-    def build(self) -> Dict[str, Any]:
+    def build(self, args: Any = None) -> Dict[str, Any]:
         """No build step needed for 7-Zip benchmark."""
         return {
             "sevenzip_command": self.sevenzip_cmd,

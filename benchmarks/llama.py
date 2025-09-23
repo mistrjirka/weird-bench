@@ -236,7 +236,7 @@ class LlamaBenchmark(BaseBenchmark):
         shutil.copy2(self.shared_model_path, self.project_model_path)
         print(f"✅ Model copied to {self.project_model_path}")
     
-    def build(self) -> Dict[str, Any]:
+    def build(self, args: Any = None) -> Dict[str, Any]:
         """Build Llama.cpp with both CPU-only and Vulkan versions."""
         build_results = {}
         
@@ -244,12 +244,17 @@ class LlamaBenchmark(BaseBenchmark):
         print(f"🚀 Building llama.cpp with CPU and Vulkan versions")
         print(f"{'='*60}")
         
+        # Check if --no-gpu is specified
+        no_gpu = args and getattr(args, 'no_gpu', False)
+        if no_gpu:
+            print("🖥️  --no-gpu specified: skipping Vulkan build, CPU-only mode")
+        
         # Step 1: Clean environment and setup project once
         print("🧹 Cleaning build environment...")
         if os.path.exists(self.project_dir):
             shutil.rmtree(self.project_dir)
         
-        print("� Setting up project...")
+        print("📦 Setting up project...")
         self._setup_project_and_copy_model()
         
         # Step 2: Build CPU version (with timing)
@@ -554,7 +559,11 @@ class LlamaBenchmark(BaseBenchmark):
             results["cpu_skip_reason"] = "cpu_build_failed"
         
         # GPU benchmarks using Vulkan build
-        if vulkan_supported and "vulkan_bench_binary" in self.results["build"]:
+        no_gpu = args and getattr(args, 'no_gpu', False)
+        if no_gpu:
+            print(f"\n⏭️  Skipping GPU benchmarks (--no-gpu)")
+            results["gpu_skip_reason"] = "no_gpu_flag_set"
+        elif vulkan_supported and "vulkan_bench_binary" in self.results["build"]:
             print("\n=== Running GPU benchmarks (using Vulkan build) ===")
             try:
                 gpu_binary = self.results["build"]["vulkan_bench_binary"]
