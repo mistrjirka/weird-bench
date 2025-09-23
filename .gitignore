@@ -2,6 +2,8 @@
 __pycache__/
 *.py[codz]
 *$py.class
+result_plots/
+result_plots/**
 
 # C extensions
 *.so
