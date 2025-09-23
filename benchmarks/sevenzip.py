@@ -204,12 +204,22 @@ class SevenZipBenchmark(BaseBenchmark):
         return info
     
     def _get_cpu_count(self) -> int:
-        """Get the number of CPU threads available."""
+        """Get the number of physical CPU cores available."""
+        try:
+            import psutil
+            physical_cores = psutil.cpu_count(logical=False)
+            if physical_cores:
+                return physical_cores
+        except ImportError:
+            pass
+        
+        # Fallback to logical cores divided by 2 (assuming hyperthreading)
         try:
             import multiprocessing
-            return multiprocessing.cpu_count()
+            logical_cores = multiprocessing.cpu_count()
+            return max(1, logical_cores // 2)
         except:
-            return 8  # Fallback
+            return 4  # Conservative fallback
     
     def benchmark(self, args: Any = None) -> Dict[str, Any]:
         """Run 7-Zip benchmarks with different thread counts."""

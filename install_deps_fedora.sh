@@ -22,6 +22,7 @@ sudo dnf install -y \
     git \
     python3 \
     python3-pip \
+    pkgconf-devel \
     pkgconf-devel
 
 # 7-Zip for compression benchmark
@@ -74,7 +75,7 @@ for cmd in "${commands[@]}"; do
 done
 
 # Check Python packages
-python_packages=("matplotlib" "numpy" "requests" "pexpect")
+python_packages=("matplotlib" "numpy" "requests" "pexpect" "psutil")
 echo ""
 echo "🐍 Checking Python packages..."
 

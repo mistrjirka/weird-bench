@@ -21,7 +21,8 @@ sudo pacman -S --needed \
     cmake \
     git \
     python \
-    python-pip
+    python-pip \
+    pkgconf
 
 # 7-Zip for compression benchmark
 echo ""
@@ -69,7 +70,7 @@ for cmd in "${commands[@]}"; do
 done
 
 # Check Python packages
-python_packages=("matplotlib" "numpy" "requests" "pexpect")
+python_packages=("matplotlib" "numpy" "requests" "pexpect" "psutil")
 echo ""
 echo "🐍 Checking Python packages..."
 

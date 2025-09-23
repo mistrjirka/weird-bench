@@ -72,7 +72,7 @@ for cmd in "${commands[@]}"; do
 done
 
 # Check Python packages
-python_packages=("matplotlib" "numpy" "requests" "pexpect")
+python_packages=("matplotlib" "numpy" "requests" "pexpect" "psutil")
 echo ""
 echo "🐍 Checking Python packages..."
 
