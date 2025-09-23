@@ -1,0 +1,13 @@
+# Python dependencies for weird-bench
+matplotlib>=3.5.0
+numpy>=1.20.0
+
+# Optional but recommended for better GNU time support
+# System packages needed (install via package manager):
+# - git
+# - cmake  
+# - curl (required by llama.cpp build system)
+# - gcc or clang (C++ compiler)
+# - build-essential (Ubuntu/Debian) or xcode-select --install (macOS)
+# - time (GNU time)
+# - vulkan-sdk (optional, for GPU acceleration)

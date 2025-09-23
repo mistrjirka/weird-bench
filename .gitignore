@@ -4,6 +4,10 @@ __pycache__/
 *$py.class
 result_plots/
 result_plots/**
+models/
+results/
+llama.cpp/
+Reversan-Engine/
 
 # C extensions
 *.so
