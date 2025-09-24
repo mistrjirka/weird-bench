@@ -23,7 +23,8 @@ sudo apt install -y \
     python3 \
     python3-pip \
     python3-psutil \
-    pkg-config
+    pkg-config \
+    libcurl4-openssl-dev
 
 # Python packages (system packages)
 echo ""
