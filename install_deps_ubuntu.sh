@@ -25,6 +25,15 @@ sudo apt install -y \
     python3-psutil \
     pkg-config
 
+# Python packages (system packages)
+echo ""
+echo "🐍 Installing Python packages..."
+sudo apt install -y \
+    python3-matplotlib \
+    python3-numpy \
+    python3-requests \
+    python3-pexpect
+
 # 7-Zip for compression benchmark
 echo ""
 echo "🗜️  Installing 7-Zip..."
@@ -37,16 +46,6 @@ sudo apt install -y \
     libvulkan-dev \
     vulkan-tools \
     vulkan-utility-libraries-dev
-
-
-# Additional Python packages via pip
-echo ""
-echo "🐍 Installing Python packages..."
-pip3 install --user \
-    matplotlib \
-    numpy \
-    requests \
-    pexpect
 
 # Optional: Install GPU drivers (user can uncomment what they need)
 echo ""
