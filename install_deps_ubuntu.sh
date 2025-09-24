@@ -22,6 +22,7 @@ sudo apt install -y \
     git \
     python3 \
     python3-pip \
+    python3-psutil \
     pkg-config
 
 # 7-Zip for compression benchmark
