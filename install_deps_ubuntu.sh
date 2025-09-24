@@ -36,7 +36,8 @@ echo "🎮 Installing Vulkan support..."
 sudo apt install -y \
     libvulkan-dev \
     vulkan-tools \
-    vulkan-validationlayers-dev
+    vulkan-utility-libraries-dev
+
 
 # Additional Python packages via pip
 echo ""

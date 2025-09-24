@@ -274,24 +274,43 @@ class BenchmarkRunner:
             # Create multipart form data
             files = {}
             for key, content in files_to_upload.items():
-                files[key] = (f"{key}.json", content, "application/json")
+                # Remove the "_results" suffix for file parameter names to match API expectation
+                file_key = key.replace("_results", "")
+                files[file_key] = (f"{key}.json", content, "application/json")
             
-            # Add metadata
+            # Add metadata - include action in form data, not URL parameter
             data = {
+                "action": "upload",
                 "run_id": run_id,
                 "hardware_info": json.dumps(hardware_info),
                 "timestamp": int(time.time())
             }
             
-            # Upload to API using new parameter-based endpoint
-            response = requests.post(f"{self.api_url}/api.php?action=upload", files=files, data=data, timeout=30)
+            # Upload to API - send action in form data, not URL parameter
+            response = requests.post(f"{self.api_url}/api.php", files=files, data=data, timeout=30)
             
             if response.status_code == 200:
-                print("✅ Upload successful!")
-                result = response.json()
-                if "message" in result:
-                    print(f"📝 Server response: {result['message']}")
-                return True
+                try:
+                    result = response.json()
+                    print("✅ Upload successful!")
+                    if "message" in result:
+                        print(f"📝 Server response: {result['message']}")
+                    
+                    # Show detailed results if available
+                    if "data" in result:
+                        data = result["data"]
+                        if "total_benchmarks_stored" in data:
+                            print(f"📊 Benchmarks stored: {data['total_benchmarks_stored']}")
+                        if "results" in data:
+                            for hw_type, info in data["results"].items():
+                                print(f"� {hw_type.upper()}: {info}")
+                    
+                    return True
+                    
+                except json.JSONDecodeError as e:
+                    print(f"❌ Failed to parse server response as JSON: {e}")
+                    print(f"📝 Raw response: {response.text[:500]}")
+                    return False
             else:
                 print(f"❌ Upload failed with status {response.status_code}")
                 try:
