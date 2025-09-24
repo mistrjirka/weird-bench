@@ -7,6 +7,9 @@ import json
 import os
 import sys
 import time
+import requests
+import platform
+import subprocess
 from typing import Dict, Any, List
 
 # Import benchmark implementations
@@ -19,8 +22,9 @@ from benchmarks.blender import BlenderBenchmark
 class BenchmarkRunner:
     """Main benchmark runner."""
     
-    def __init__(self, output_dir: str = "results"):
+    def __init__(self, output_dir: str = "results", api_url: str = "http://localhost:8080/api"):
         self.output_dir = output_dir
+        self.api_url = api_url
         self.benchmarks = {
             "reversan": ReversanBenchmark,
             "llama": LlamaBenchmark,
@@ -163,6 +167,172 @@ class BenchmarkRunner:
     def list_benchmarks(self) -> List[str]:
         """List available benchmarks."""
         return list(self.benchmarks.keys())
+    
+    def get_hardware_info(self) -> Dict[str, Any]:
+        """Extract hardware information from the system."""
+        try:
+            # Get CPU info
+            cpu_info = platform.processor()
+            
+            # Try to get more detailed CPU info on Linux
+            if platform.system() == "Linux":
+                try:
+                    with open("/proc/cpuinfo", "r") as f:
+                        cpu_lines = f.readlines()
+                        for line in cpu_lines:
+                            if line.startswith("model name"):
+                                cpu_info = line.split(":")[1].strip()
+                                break
+                except:
+                    pass
+            
+            # Get GPU info (basic detection)
+            gpu_info = "Unknown"
+            try:
+                # Try nvidia-smi first
+                result = subprocess.run(["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"], 
+                                     capture_output=True, text=True, timeout=5)
+                if result.returncode == 0:
+                    gpu_info = result.stdout.strip()
+                else:
+                    # Try lspci for AMD/Intel GPUs
+                    result = subprocess.run(["lspci", "-k"], capture_output=True, text=True, timeout=5)
+                    if result.returncode == 0:
+                        for line in result.stdout.split('\n'):
+                            if 'VGA' in line or 'Display' in line:
+                                if 'Radeon' in line or 'AMD' in line:
+                                    # Extract GPU name
+                                    parts = line.split('[')
+                                    if len(parts) > 1:
+                                        gpu_info = parts[-1].split(']')[0]
+                                    break
+            except:
+                pass
+            
+            return {
+                "cpu": cpu_info,
+                "gpu": gpu_info,
+                "platform": platform.platform(),
+                "hostname": platform.node()
+            }
+        except Exception as e:
+            print(f"⚠️  Could not extract hardware info: {e}")
+            return {
+                "cpu": "Unknown",
+                "gpu": "Unknown", 
+                "platform": platform.platform(),
+                "hostname": platform.node()
+            }
+    
+    def generate_run_id(self, hardware_info: Dict[str, Any]) -> str:
+        """Generate a unique run ID based on timestamp and hardware."""
+        timestamp = int(time.time())
+        
+        # Normalize CPU name
+        cpu_name = hardware_info.get("cpu", "unknown-cpu").lower()
+        cpu_name = cpu_name.replace(" ", "-").replace("(r)", "").replace("(tm)", "")
+        cpu_name = "".join(c for c in cpu_name if c.isalnum() or c == "-")
+        
+        # Normalize GPU name
+        gpu_name = hardware_info.get("gpu", "unknown-gpu").lower()
+        if gpu_name != "unknown":
+            gpu_name = gpu_name.replace(" ", "-").replace("(r)", "").replace("(tm)", "")
+            gpu_name = "".join(c for c in gpu_name if c.isalnum() or c == "-")
+            return f"{timestamp}_{cpu_name}_{gpu_name}"
+        else:
+            return f"{timestamp}_{cpu_name}"
+    
+    def upload_results(self, upload_all: bool = False) -> bool:
+        """Upload benchmark results to the API."""
+        print("📤 Uploading benchmark results...")
+        
+        try:
+            # Get hardware info and generate run ID
+            hardware_info = self.get_hardware_info()
+            run_id = self.generate_run_id(hardware_info)
+            
+            print(f"🔧 Hardware detected: {hardware_info['cpu']}")
+            if hardware_info['gpu'] != "Unknown":
+                print(f"🎮 GPU detected: {hardware_info['gpu']}")
+            print(f"🆔 Run ID: {run_id}")
+            
+            # Prepare files to upload
+            files_to_upload = {}
+            
+            # Find benchmark result files
+            for benchmark_name in self.benchmarks.keys():
+                result_file = os.path.join(self.output_dir, f"{benchmark_name}_results.json")
+                if os.path.exists(result_file):
+                    print(f"📁 Found {benchmark_name} results: {result_file}")
+                    with open(result_file, 'rb') as f:
+                        files_to_upload[f"{benchmark_name}_results"] = f.read()
+            
+            if not files_to_upload:
+                print("❌ No benchmark result files found to upload")
+                return False
+            
+            # Create multipart form data
+            files = {}
+            for key, content in files_to_upload.items():
+                files[key] = (f"{key}.json", content, "application/json")
+            
+            # Add metadata
+            data = {
+                "run_id": run_id,
+                "hardware_info": json.dumps(hardware_info),
+                "timestamp": int(time.time())
+            }
+            
+            # Upload to API using new parameter-based endpoint
+            response = requests.post(f"{self.api_url}/api.php?action=upload", files=files, data=data, timeout=30)
+            
+            if response.status_code == 200:
+                print("✅ Upload successful!")
+                result = response.json()
+                if "message" in result:
+                    print(f"📝 Server response: {result['message']}")
+                return True
+            else:
+                print(f"❌ Upload failed with status {response.status_code}")
+                try:
+                    error_info = response.json()
+                    print(f"📝 Error details: {error_info}")
+                except:
+                    print(f"📝 Response: {response.text}")
+                return False
+                
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Network error during upload: {e}")
+            return False
+        except Exception as e:
+            print(f"❌ Upload failed: {e}")
+            return False
+    
+    def upload_existing_results(self) -> bool:
+        """Upload existing results from the results folder."""
+        print("📤 Uploading existing benchmark results...")
+        
+        # Check if results directory exists
+        if not os.path.exists(self.output_dir):
+            print(f"❌ Results directory '{self.output_dir}' does not exist")
+            return False
+        
+        # List available result files
+        available_files = []
+        for benchmark_name in self.benchmarks.keys():
+            result_file = os.path.join(self.output_dir, f"{benchmark_name}_results.json")
+            if os.path.exists(result_file):
+                available_files.append((benchmark_name, result_file))
+        
+        if not available_files:
+            print(f"❌ No benchmark result files found in '{self.output_dir}'")
+            return False
+        
+        print(f"📁 Found {len(available_files)} result files:")
+        for benchmark_name, file_path in available_files:
+            print(f"   • {benchmark_name}: {file_path}")
+        
+        return self.upload_results(upload_all=True)
 
 
 def main():
@@ -215,13 +385,31 @@ def main():
         help="Combine individual benchmark result files into a single all_benchmarks_results.json"
     )
     
+    parser.add_argument(
+        "--upload",
+        action="store_true",
+        help="Upload results to the backend API after benchmarking is complete"
+    )
+    
+    parser.add_argument(
+        "--upload-existing",
+        action="store_true",
+        help="Upload existing result files from the results folder without running new benchmarks"
+    )
+    
+    parser.add_argument(
+        "--api-url",
+        default="http://localhost:8090/api",
+        help="API URL for uploading results (for Docker development environment)"
+    )
+    
     args = parser.parse_args()
     
     if args.runs < 1:
         print("Error: Number of runs must be at least 1", file=sys.stderr)
         sys.exit(1)
     
-    runner = BenchmarkRunner(args.output_dir)
+    runner = BenchmarkRunner(args.output_dir, args.api_url)
     
     if args.list:
         print("Available benchmarks:")
@@ -256,10 +444,19 @@ def main():
         print("  all - Run all benchmarks (default)")
         print("    • Efficient execution with shared model caching")
         print("    • Combined results and plotting")
+        print()
+        print("Upload options:")
+        print("  --upload                Upload results after benchmarking")
+        print("  --upload-existing       Upload existing results from results/ folder")
+        print("  --api-url URL           API endpoint (default: http://localhost:8080/api)")
         return 0
     
     try:
-        if args.combine_results:
+        if args.upload_existing:
+            # Upload existing results without running benchmarks
+            success = runner.upload_existing_results()
+            return 0 if success else 1
+        elif args.combine_results:
             runner.combine_results_from_files()
         elif args.benchmark == "all":
             runner.run_all_benchmarks(args)
@@ -274,6 +471,13 @@ def main():
                     "results": result
                 }, f, indent=2)
             print(f"💾 Results saved to: {individual_results_file}")
+        
+        # Upload results if requested
+        if args.upload and not args.upload_existing:
+            print("\n" + "="*50)
+            success = runner.upload_results()
+            if not success:
+                print("⚠️  Upload failed, but benchmark results are still available locally")
         
         return 0
         

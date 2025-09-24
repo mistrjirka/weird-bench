@@ -125,16 +125,48 @@ class ReversanBenchmark(BaseBenchmark):
         raise RuntimeError("No 'reversan*' binary found in repo root.")
     
     def _get_cpu_count(self) -> int:
-        """Get number of CPU cores/threads available."""
+        """Get number of physical CPU cores available."""
         try:
-            # Try to get logical CPU count (includes hyperthreading)
-            cpu_count = multiprocessing.cpu_count()
-            print(f"Detected {cpu_count} CPU threads")
-            return cpu_count
+            import psutil
+            physical_cores = psutil.cpu_count(logical=False)
+            if physical_cores:
+                print(f"Detected {physical_cores} physical CPU cores")
+                return physical_cores
+        except ImportError:
+            pass
+        
+        # Fallback to logical cores divided by 2 (assuming hyperthreading)
+        try:
+            import multiprocessing
+            logical_cores = multiprocessing.cpu_count()
+            physical_estimate = max(1, logical_cores // 2)
+            print(f"Estimated {physical_estimate} physical cores (from {logical_cores} logical)")
+            return physical_estimate
         except (ImportError, NotImplementedError):
-            # Fallback to 8 if detection fails
-            print("Could not detect CPU count, defaulting to 8 threads")
-            return 8
+            # Final fallback
+            print("Could not detect CPU count, defaulting to 4 cores")
+            return 4
+    
+    def _get_thread_test_counts(self, max_threads: int) -> List[int]:
+        """Generate thread counts for testing in halving pattern (max, max/2, max/4, ..., 1)."""
+        if max_threads <= 0:
+            return [1]
+        
+        thread_counts = []
+        current = max_threads
+        
+        # Start from max and halve until we reach 1
+        while current >= 1:
+            thread_counts.append(current)
+            current //= 2
+        
+        # Ensure we always test with 1 thread (if not already included)
+        if thread_counts[-1] != 1:
+            thread_counts.append(1)
+        
+        # Sort in descending order for cleaner output
+        thread_counts.sort(reverse=True)
+        return thread_counts
     
     def _reversan_supports_threads(self, bin_path: str) -> bool:
         """Check if the binary supports threads."""
@@ -196,8 +228,9 @@ class ReversanBenchmark(BaseBenchmark):
         
         # Threads sweep tests @ depth 11
         max_threads = self._get_cpu_count()
-        print(f"\n=== Running threads sweep tests (1-{max_threads}) at depth 11 with {runs} run(s) each ===")
-        for t in range(1, max_threads + 1):
+        thread_counts = self._get_thread_test_counts(max_threads)
+        print(f"\n=== Running threads sweep tests {thread_counts} at depth 11 with {runs} run(s) each ===")
+        for t in thread_counts:
             if not threads_supported:
                 print(f"Skipping threads test {t} (threads not supported)")
                 results["runs_threads"].append({
@@ -274,7 +307,12 @@ class ReversanBenchmark(BaseBenchmark):
         max_rss_kb = get(r"Maximum resident set size \(kbytes\):\s+(\d+)", int)
         user_sec = get(r"User time \(seconds\):\s+([0-9.]+)")
         sys_sec = get(r"System time \(seconds\):\s+([0-9.]+)")
-        elapsed = get(r"Elapsed \(wall clock\) time \(h:mm:ss or m:ss\):\s+([0-9:]+)", str)
+        
+        # Get elapsed time as string for parsing
+        elapsed_str = None
+        m = re.search(r"Elapsed \(wall clock\) time \(h:mm:ss or m:ss\):\s+([0-9:]+)", stderr_text)
+        if m:
+            elapsed_str = m.group(1).strip()
         
         def hms_to_s(s):
             if not isinstance(s, str):
@@ -290,7 +328,7 @@ class ReversanBenchmark(BaseBenchmark):
             "max_rss_kb": max_rss_kb,
             "user_seconds": user_sec,
             "sys_seconds": sys_sec,
-            "elapsed_seconds": hms_to_s(elapsed),
+            "elapsed_seconds": hms_to_s(elapsed_str),
         }
     
     def _calculate_average_metrics(self, runs: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:

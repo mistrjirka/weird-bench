@@ -209,6 +209,7 @@ class SevenZipBenchmark(BaseBenchmark):
             import psutil
             physical_cores = psutil.cpu_count(logical=False)
             if physical_cores:
+                print(f"Detected {physical_cores} physical CPU cores")
                 return physical_cores
         except ImportError:
             pass
@@ -217,9 +218,33 @@ class SevenZipBenchmark(BaseBenchmark):
         try:
             import multiprocessing
             logical_cores = multiprocessing.cpu_count()
-            return max(1, logical_cores // 2)
+            physical_estimate = max(1, logical_cores // 2)
+            print(f"Estimated {physical_estimate} physical cores (from {logical_cores} logical)")
+            return physical_estimate
         except:
+            print("Could not detect CPU count, defaulting to 4 cores")
             return 4  # Conservative fallback
+    
+    def _get_thread_test_counts(self, max_threads: int) -> List[int]:
+        """Generate thread counts for testing in halving pattern (max, max/2, max/4, ..., 1)."""
+        if max_threads <= 0:
+            return [1]
+        
+        thread_counts = []
+        current = max_threads
+        
+        # Start from max and halve until we reach 1
+        while current >= 1:
+            thread_counts.append(current)
+            current //= 2
+        
+        # Ensure we always test with 1 thread (if not already included)
+        if thread_counts[-1] != 1:
+            thread_counts.append(1)
+        
+        # Sort in descending order for cleaner output
+        thread_counts.sort(reverse=True)
+        return thread_counts
     
     def benchmark(self, args: Any = None) -> Dict[str, Any]:
         """Run 7-Zip benchmarks with different thread counts."""
@@ -234,8 +259,7 @@ class SevenZipBenchmark(BaseBenchmark):
         try:
             # Test different thread counts
             max_threads = self._get_cpu_count()
-            thread_counts = [1, 2, 4, 8, max_threads] if max_threads > 8 else [1, 2, 4, max_threads]
-            thread_counts = sorted(list(set(thread_counts)))  # Remove duplicates and sort
+            thread_counts = self._get_thread_test_counts(max_threads)
             
             print(f"🧮 Testing with thread counts: {thread_counts}")
             
