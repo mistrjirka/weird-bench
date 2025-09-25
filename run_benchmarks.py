@@ -22,7 +22,7 @@ from benchmarks.blender import BlenderBenchmark
 class BenchmarkRunner:
     """Main benchmark runner."""
     
-    def __init__(self, output_dir: str = "results", api_url: str = "http://localhost:8080/api"):
+    def __init__(self, output_dir: str = "results", api_url: str = "https://weirdbench.eu/api"):
         self.output_dir = output_dir
         self.api_url = api_url
         self.benchmarks = {
@@ -286,8 +286,8 @@ class BenchmarkRunner:
                 "timestamp": int(time.time())
             }
             
-            # Upload to API - send action in form data, not URL parameter
-            response = requests.post(f"{self.api_url}/api.php", files=files, data=data, timeout=30)
+            # Upload to API - use /api/upload endpoint
+            response = requests.post(f"{self.api_url}/upload", files=files, data=data, timeout=30)
             
             if response.status_code == 200:
                 try:
@@ -418,7 +418,7 @@ def main():
     
     parser.add_argument(
         "--api-url",
-        default="http://localhost:8090/api",
+        default="https://weirdbench.eu/api",
         help="API URL for uploading results (for Docker development environment)"
     )
     
@@ -467,7 +467,7 @@ def main():
         print("Upload options:")
         print("  --upload                Upload results after benchmarking")
         print("  --upload-existing       Upload existing results from results/ folder")
-        print("  --api-url URL           API endpoint (default: http://localhost:8080/api)")
+        print("  --api-url URL           API endpoint (default: https://weirdbench.eu/api)")
         return 0
     
     try:
