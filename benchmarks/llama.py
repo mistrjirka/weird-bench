@@ -447,40 +447,115 @@ class LlamaBenchmark(BaseBenchmark):
 
     # ---------- Device detection & selection ----------
 
+    def _vulkaninfo_text(self) -> Optional[str]:
+        """Run `vulkaninfo` and return combined text (stdout+stderr). Works headless."""
+        import shutil
+        if not shutil.which("vulkaninfo"):
+            return None
+        try:
+            r = subprocess.run(
+                ["vulkaninfo"],
+                capture_output=True, text=True, timeout=60
+            )
+            # některé verze hází varování na stdout/stderr, tak to sloučíme
+            text = (r.stdout or "") + ("\n" + r.stderr if r.stderr else "")
+            text = text.strip()
+            if not text:
+                return None
+            return text
+        except Exception:
+            return None
+    def _parse_vulkaninfo_text(self, text: str) -> List[Dict[str, Any]]:
+        """
+        Parse text output of `vulkaninfo`:
+        Finds blocks starting with 'GPU<N>:' and extracts deviceName (and driverName if present).
+        """
+        devices: List[Dict[str, Any]] = []
+        lines = text.splitlines()
+
+        # najdi začátky bloků GPU
+        positions: List[tuple[int,int]] = []
+        for i, line in enumerate(lines):
+            m = re.match(r"\s*GPU\s*([0-9]+)\s*:", line)
+            if m:
+                positions.append((i, int(m.group(1))))
+
+        for idx, (start, gpu_index) in enumerate(positions):
+            end = positions[idx + 1][0] if idx + 1 < len(positions) else len(lines)
+            block = "\n".join(lines[start:end])
+
+            # deviceName = ...
+            name = None
+            m_name = re.search(r"deviceName\s*=\s*(.+)", block)
+            if m_name:
+                name = m_name.group(1).strip()
+            else:
+                # alternative format with colon (rare)
+                m_name2 = re.search(r"deviceName\s*:\s*(.+)", block)
+                if m_name2:
+                    name = m_name2.group(1).strip()
+
+            # driverName (ne vždy je k dispozici)
+            driver = None
+            m_drv = re.search(r"driverName\s*=\s*(.+)", block)
+            if m_drv:
+                driver = m_drv.group(1).strip()
+            else:
+                m_drv2 = re.search(r"driverName\s*:\s*(.+)", block)
+                if m_drv2:
+                    driver = m_drv2.group(1).strip()
+
+            if not name:
+                name = f"Vulkan Device {gpu_index}"
+
+            devices.append({
+                "index": gpu_index,
+                "name": name,
+                "driver": driver or "unknown",
+                "icd_path": None,  # nikdy nevynucujeme ICD
+            })
+
+        return devices
+
     def _vulkaninfo_json(self, extra_env: Optional[Dict[str, str]] = None) -> Optional[Dict[str, Any]]:
-        """Run `vulkaninfo --json` and return parsed dict (or None)."""
+        """Run `vulkaninfo --json` and parse; tolerates headless warnings on stdout."""
+        import shutil, json as _json
         if not shutil.which("vulkaninfo"):
             return None
         env = os.environ.copy()
         if extra_env:
             env.update(extra_env)
         try:
-            r = subprocess.run(
-                ["vulkaninfo", "--json"],
-                capture_output=True, text=True, env=env, timeout=30
-            )
-            if r.returncode != 0:
+            r = subprocess.run(["vulkaninfo", "--json"], capture_output=True, text=True, env=env, timeout=30)
+            raw = (r.stdout or "")  # některé verze posílají warningy taky na stdout
+            if not raw:
                 return None
-            data = r.stdout.strip()
-            return json.loads(data)
-        except Exception as e:
-            print(f"Exception: {e}")
+            # odstraň vše před prvním '{'
+            first_brace = raw.find('{')
+            if first_brace == -1:
+                return None
+            cleaned = raw[first_brace:].strip()
+            return _json.loads(cleaned)
+        except Exception:
             return None
 
     def _detect_available_gpus(self) -> List[Dict[str, Any]]:
         """
-        Enumerate ALL Vulkan physical devices via vulkaninfo --json.
+        Prefer robust text parsing (works headless). Fall back to JSON if usable.
         Index corresponds directly to GGML_VULKAN_DEVICE.
-        No ICD forcing, 'icd_path' is always None (kept for dict shape compatibility).
         """
-        gpus: List[Dict[str, Any]] = []
+        # 1) textový výstup (headless-friendly)
+        text = self._vulkaninfo_text()
+        if text:
+            devices = self._parse_vulkaninfo_text(text)
+            if devices:
+                return devices
 
-        # Try JSON first
+        # 2) fallback: JSON (po oříznutí preambule)
         info = self._vulkaninfo_json()
-        print("Vulkaninfo JSON output:", info)
         if info and "physicalDevices" in info:
+            gpus: List[Dict[str, Any]] = []
             for idx, dev in enumerate(info["physicalDevices"]):
-                print("Physical Device:", dev)
                 props = dev.get("properties", {})
                 name = props.get("deviceName", f"Vulkan Device {idx}")
                 driver_name = props.get("driverName") or props.get("driverID") or "unknown"
@@ -488,31 +563,14 @@ class LlamaBenchmark(BaseBenchmark):
                     "index": idx,
                     "name": name,
                     "driver": str(driver_name),
-                    "icd_path": None,  # never force an ICD
+                    "icd_path": None,
                 })
+            if gpus:
+                return gpus
 
-        # Fallback: --summary
-        if not gpus:
-            try:
-                r = subprocess.run(["vulkaninfo", "--summary"], capture_output=True, text=True, timeout=30)
-                if r.returncode == 0:
-                    for line in r.stdout.splitlines():
-                        m = re.match(r"\s*GPU\s*([0-9]+)\s*:\s*(.+)", line)
-                        if m:
-                            i = int(m.group(1))
-                            name = m.group(2).strip()
-                            print("Summary Device:", i, name)
-                            gpus.append({
-                                "index": i,
-                                "name": name,
-                                "driver": "unknown",
-                                "icd_path": None,
-                            })
-            except Exception as e:
-                print(f"Exception: {e}")
+        # 3) nic nenalezeno
+        return []
 
-        # Last fallback: no devices
-        return gpus
 
 
     def _list_vulkan_icd_files(self) -> List[str]:
@@ -551,18 +609,11 @@ class LlamaBenchmark(BaseBenchmark):
                 print(f"   ⚠️  Warning: ICD file not found: {vk_driver_files}")
 
     def _get_gpu_env_vars(self) -> Dict[str, str]:
-        """
-        Only set GGML_VULKAN_DEVICE by default.
-        Do NOT set VK_DRIVER_FILES unless explicitly requested by user CLI.
-        """
         env: Dict[str, str] = {}
         if self.gpu_device_index is not None:
             env['GGML_VULKAN_DEVICE'] = str(self.gpu_device_index)
-        if self.vk_driver_files:
-            # user explicitly asked to lock to an ICD (e.g., mixing vendors)
-            env['VK_DRIVER_FILES'] = self.vk_driver_files
-            env['VK_ICD_FILENAMES'] = self.vk_driver_files
         return env
+
 
     # ---------- Running ----------
 
