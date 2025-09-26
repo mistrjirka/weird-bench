@@ -47,7 +47,7 @@ sudo pacman -S --needed time
 # Additional Python packages via pip
 echo ""
 echo "🐍 Installing Python packages..."
-sudo pacman -S python-matplotlib python-numpy python-requests python-pexpect
+sudo pacman -S python-matplotlib python-numpy python-requests python-pexpect --needed 
 # Optional: Install GPU drivers (user can uncomment what they need)
 echo ""
 echo "💡 GPU Driver Installation (you may need these for Vulkan):"
