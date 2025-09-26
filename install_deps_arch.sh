@@ -40,6 +40,9 @@ sudo pacman -S --needed \
     shaderc
 sudo pacman -S --needed libxi
 
+# GNU time (provides /usr/bin/time)
+sudo pacman -S --needed time
+
 
 # Additional Python packages via pip
 echo ""
@@ -61,7 +64,7 @@ echo "✅ Verifying installations..."
 echo ""
 
 # Check if commands are available
-commands=("cmake" "git" "python3" "7z" "pip")
+commands=("cmake" "git" "python3" "7z" "pip" "time")
 missing=()
 
 for cmd in "${commands[@]}"; do

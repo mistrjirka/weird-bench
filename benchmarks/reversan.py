@@ -22,8 +22,11 @@ class ReversanBenchmark(BaseBenchmark):
         self.repo_url = "https://github.com/Saniel0/Reversan-Engine.git"
         self.project_dir = os.path.abspath("Reversan-Engine")
         self.build_dir = os.path.join(self.project_dir, "build")
+        # Detect GNU time binary; keep meta value as None when not available so server
+        # can treat missing measurer as an invalid/partial benchmark dataset.
         self.gnu_time = self._find_gnu_time()
-        self.results["meta"]["gnu_time"] = bool(self.gnu_time)
+        # Intentionally store None (null in JSON) if not found; store string when present
+        self.results["meta"]["gnu_time"] = self.gnu_time if self.gnu_time else None
         self.results["meta"]["repo"] = self.repo_url
         
         # Generate unique build ID for cold builds
@@ -58,6 +61,12 @@ class ReversanBenchmark(BaseBenchmark):
     
     def setup(self) -> None:
         """Clone or update the Reversan repository."""
+        # Warn the user if GNU time is not available — benchmarks will still run
+        # but will report null for detailed timing fields which the server may
+        # reject during strict validation.
+        if not self.gnu_time:
+            print("⚠️  GNU time not found on system. Detailed timing metrics will be null.")
+
         # Always delete and re-clone for clean state
         if os.path.isdir(self.project_dir):
             print(f"Removing existing {self.project_dir}")

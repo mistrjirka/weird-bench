@@ -32,6 +32,9 @@ sudo apt install -y \
     python3-pexpect \
     libxi6
 
+# GNU time for process metrics (provides /usr/bin/time)
+sudo apt install -y time
+
 # 7-Zip for compression benchmark
 echo ""
 echo "🗜️  Installing 7-Zip..."
@@ -57,7 +60,7 @@ echo "✅ Verifying installations..."
 echo ""
 
 # Check if commands are available
-commands=("cmake" "git" "python3" "7z" "pip3")
+commands=("cmake" "git" "python3" "7z" "pip3" "time")
 missing=()
 
 for cmd in "${commands[@]}"; do

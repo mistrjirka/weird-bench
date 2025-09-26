@@ -10,6 +10,7 @@ import time
 import requests
 import platform
 import subprocess
+import shutil
 from typing import Dict, Any, List
 
 # Import benchmark implementations
@@ -32,6 +33,16 @@ class BenchmarkRunner:
             "blender": BlenderBenchmark
         }
         os.makedirs(output_dir, exist_ok=True)
+
+        # Detect presence of GNU time utility early and warn the user. Keep
+        # the actual benchmark modules responsible for recording the exact
+        # binary path; this check only informs at startup.
+        candidates = ["/usr/bin/time", shutil.which("time"), shutil.which("gtime")]
+        self.gnu_time = next((c for c in candidates if c), None)
+        if not self.gnu_time:
+            print("⚠️  GNU time utility not found: detailed process metrics will be null for benchmarks that rely on it.")
+        else:
+            print(f"ℹ️  GNU time detected at: {self.gnu_time}")
 
     def run_benchmark(self, benchmark_name: str, args: Any = None) -> Dict[str, Any]:
         """Run a specific benchmark."""

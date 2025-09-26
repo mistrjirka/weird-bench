@@ -40,6 +40,8 @@ sudo dnf install -y \
     vulkan-devel \
     vulkan-headers \
     vulkan-validation-layers-devel
+# GNU time for process metrics
+sudo dnf install -y time
 
 # Additional Python packages via pip
 echo ""
@@ -63,7 +65,7 @@ echo "✅ Verifying installations..."
 echo ""
 
 # Check if commands are available
-commands=("cmake" "git" "python3" "7z" "pip3")
+commands=("cmake" "git" "python3" "7z" "pip3" "time")
 missing=()
 
 for cmd in "${commands[@]}"; do
