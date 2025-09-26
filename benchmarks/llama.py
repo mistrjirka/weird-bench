@@ -14,26 +14,6 @@ from typing import Dict, Any, List, Optional
 from .base import BaseBenchmark
 
 
-def _vulkaninfo_json(self, extra_env: Optional[Dict[str, str]] = None) -> Optional[Dict[str, Any]]:
-    """Run `vulkaninfo --json` and return parsed dict (or None on failure)."""
-    if not shutil.which("vulkaninfo"):
-        return None
-    env = os.environ.copy()
-    if extra_env:
-        env.update(extra_env)
-    try:
-        # --json existuje na moderních balíčcích vulkan-tools
-        r = subprocess.run(
-            ["vulkaninfo", "--json"],
-            capture_output=True, text=True, env=env, timeout=30
-        )
-        if r.returncode != 0:
-            return None
-        # některé verze tisknou BOM / prefix; ořízneme whitespace na zač./konci
-        data = r.stdout.strip()
-        return json.loads(data)
-    except Exception:
-        return None
 class CompilationToolbox:
     """Unified toolbox for managing compilation and build processes."""
     
@@ -582,6 +562,26 @@ class LlamaBenchmark(BaseBenchmark):
         except Exception:
             return None
     
+    def _vulkaninfo_json(self, extra_env: Optional[Dict[str, str]] = None) -> Optional[Dict[str, Any]]:
+        """Run `vulkaninfo --json` and return parsed dict (or None on failure)."""
+        if not shutil.which("vulkaninfo"):
+            return None
+        env = os.environ.copy()
+        if extra_env:
+            env.update(extra_env)
+        try:
+            # --json existuje na moderních balíčcích vulkan-tools
+            r = subprocess.run(
+                ["vulkaninfo", "--json"],
+                capture_output=True, text=True, env=env, timeout=30
+            )
+            if r.returncode != 0:
+                return None
+            # některé verze tisknou BOM / prefix; ořízneme whitespace na zač./konci
+            data = r.stdout.strip()
+            return json.loads(data)
+        except Exception:
+            return None
     def _detect_available_gpus(self) -> List[Dict[str, Any]]:
         """
         Enumerate ALL Vulkan physical devices (not ICD files).
