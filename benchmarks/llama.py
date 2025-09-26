@@ -476,8 +476,10 @@ class LlamaBenchmark(BaseBenchmark):
 
         # Try JSON first
         info = self._vulkaninfo_json()
+        print("Vulkaninfo JSON output:", info)
         if info and "physicalDevices" in info:
             for idx, dev in enumerate(info["physicalDevices"]):
+                print("Physical Device:", dev)
                 props = dev.get("properties", {})
                 name = props.get("deviceName", f"Vulkan Device {idx}")
                 driver_name = props.get("driverName") or props.get("driverID") or "unknown"
@@ -498,6 +500,7 @@ class LlamaBenchmark(BaseBenchmark):
                         if m:
                             i = int(m.group(1))
                             name = m.group(2).strip()
+                            print("Summary Device:", i, name)
                             gpus.append({
                                 "index": i,
                                 "name": name,
