@@ -470,8 +470,11 @@ class LlamaBenchmark(BaseBenchmark):
         """
         Enumerate ALL Vulkan physical devices via vulkaninfo --json.
         Index corresponds directly to GGML_VULKAN_DEVICE.
+        No ICD forcing, 'icd_path' is always None (kept for dict shape compatibility).
         """
         gpus: List[Dict[str, Any]] = []
+
+        # Try JSON first
         info = self._vulkaninfo_json()
         if info and "physicalDevices" in info:
             for idx, dev in enumerate(info["physicalDevices"]):
@@ -482,16 +485,15 @@ class LlamaBenchmark(BaseBenchmark):
                     "index": idx,
                     "name": name,
                     "driver": str(driver_name),
-                    "icd_path": None,  # do not force ICD for multi-GPU on same vendor
+                    "icd_path": None,  # never force an ICD
                 })
 
-        # fallback: --summary
+        # Fallback: --summary
         if not gpus:
             try:
                 r = subprocess.run(["vulkaninfo", "--summary"], capture_output=True, text=True, timeout=30)
                 if r.returncode == 0:
-                    lines = r.stdout.splitlines()
-                    for line in lines:
+                    for line in r.stdout.splitlines():
                         m = re.match(r"\s*GPU\s*([0-9]+)\s*:\s*(.+)", line)
                         if m:
                             i = int(m.group(1))
@@ -502,19 +504,12 @@ class LlamaBenchmark(BaseBenchmark):
                                 "driver": "unknown",
                                 "icd_path": None,
                             })
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"Exception: {e}")
 
-        # last fallback: ICD files (coarse)
-        if not gpus:
-            for i, icd_path in enumerate(self._list_vulkan_icd_files()):
-                gpus.append({
-                    "index": i,
-                    "name": f"Vulkan Device {i} ({os.path.basename(icd_path)})",
-                    "driver": os.path.basename(icd_path),
-                    "icd_path": icd_path
-                })
+        # Last fallback: no devices
         return gpus
+
 
     def _list_vulkan_icd_files(self) -> List[str]:
         icd_paths = []
