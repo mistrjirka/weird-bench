@@ -14,6 +14,26 @@ from typing import Dict, Any, List, Optional
 from .base import BaseBenchmark
 
 
+def _vulkaninfo_json(self, extra_env: Optional[Dict[str, str]] = None) -> Optional[Dict[str, Any]]:
+    """Run `vulkaninfo --json` and return parsed dict (or None on failure)."""
+    if not shutil.which("vulkaninfo"):
+        return None
+    env = os.environ.copy()
+    if extra_env:
+        env.update(extra_env)
+    try:
+        # --json existuje na moderních balíčcích vulkan-tools
+        r = subprocess.run(
+            ["vulkaninfo", "--json"],
+            capture_output=True, text=True, env=env, timeout=30
+        )
+        if r.returncode != 0:
+            return None
+        # některé verze tisknou BOM / prefix; ořízneme whitespace na zač./konci
+        data = r.stdout.strip()
+        return json.loads(data)
+    except Exception:
+        return None
 class CompilationToolbox:
     """Unified toolbox for managing compilation and build processes."""
     
@@ -563,72 +583,60 @@ class LlamaBenchmark(BaseBenchmark):
             return None
     
     def _detect_available_gpus(self) -> List[Dict[str, Any]]:
-        """Detect available Vulkan GPUs using vulkaninfo."""
-        gpus = []
-        try:
-            # Run vulkaninfo to get GPU information
-            result = subprocess.run(["vulkaninfo"], capture_output=True, text=True, timeout=30)
-            if result.returncode == 0:
-                output = result.stdout
-                
-                # Parse GPU information from vulkaninfo output
-                gpu_blocks = []
-                current_gpu = None
-                
-                for line in output.split('\n'):
-                    line = line.strip()
-                    if line.startswith('GPU id'):
-                        if current_gpu:
-                            gpu_blocks.append(current_gpu)
-                        current_gpu = {'id': None, 'name': '', 'driver': ''}
-                        # Extract GPU id
-                        id_match = re.search(r'GPU id\s*:\s*(\d+)', line)
-                        if id_match:
-                            current_gpu['id'] = int(id_match.group(1))
-                    elif line.startswith('deviceName'):
-                        name_match = re.search(r'deviceName\s*=\s*(.+)', line)
-                        if name_match and current_gpu:
-                            current_gpu['name'] = name_match.group(1).strip()
-                    elif 'driverName' in line and current_gpu:
-                        driver_match = re.search(r'driverName\s*=\s*(.+)', line)
-                        if driver_match:
-                            current_gpu['driver'] = driver_match.group(1).strip()
-                
-                if current_gpu:
-                    gpu_blocks.append(current_gpu)
-                
-                # Convert to our format
-                for gpu in gpu_blocks:
-                    if gpu['id'] is not None and gpu['name']:
-                        gpus.append({
-                            'index': gpu['id'],
-                            'name': gpu['name'],
-                            'driver': gpu['driver'],
-                            'icd_path': self._get_icd_path_for_driver(gpu['driver'])
-                        })
-            
-            # Fallback: try to detect from available ICD files
-            if not gpus:
-                icd_files = self._list_vulkan_icd_files()
-                for i, icd_path in enumerate(icd_files):
-                    gpus.append({
-                        'index': i,
-                        'name': f'Vulkan Device {i} ({os.path.basename(icd_path)})',
-                        'driver': os.path.basename(icd_path),
-                        'icd_path': icd_path
-                    })
-                        
-        except (subprocess.TimeoutExpired, FileNotFoundError):
-            # vulkaninfo not available, try fallback detection
-            icd_files = self._list_vulkan_icd_files()
-            for i, icd_path in enumerate(icd_files):
+        """
+        Enumerate ALL Vulkan physical devices (not ICD files).
+        Index zde odpovídá fyzickému zařízení pro GGML_VULKAN_DEVICE.
+        """
+        gpus: List[Dict[str, Any]] = []
+
+        # 1) pokus o plný výčet zařízení přes JSON
+        info = self._vulkaninfo_json()
+        if info and "physicalDevices" in info:
+            for idx, dev in enumerate(info["physicalDevices"]):
+                props = dev.get("properties", {})
+                name = props.get("deviceName", f"Vulkan Device {idx}")
+                driver_name = props.get("driverName") or props.get("driverID") or "unknown"
+                # pokus o mapování na ICD soubor (není nutné pro NVIDIA; obě karty běží pod stejným ICD)
+                icd_path = None
+                # Pokud chceš být striktní: necháme None, loader to vyřeší sám.
                 gpus.append({
-                    'index': i,
-                    'name': f'Vulkan Device {i} ({os.path.basename(icd_path)})',
-                    'driver': os.path.basename(icd_path),
-                    'icd_path': icd_path
+                    "index": idx,
+                    "name": name,
+                    "driver": str(driver_name),
+                    "icd_path": icd_path,
                 })
-        
+
+        # 2) fallback: hrubý parsing z --summary (pro starší vulkaninfo)
+        if not gpus:
+            try:
+                r = subprocess.run(["vulkaninfo", "--summary"], capture_output=True, text=True, timeout=30)
+                if r.returncode == 0:
+                    lines = r.stdout.splitlines()
+                    for idx, line in enumerate(lines):
+                        # typicky: "GPU0: NVIDIA GeForce RTX 3060 Ti"
+                        m = re.match(r"\s*GPU\s*([0-9]+)\s*:\s*(.+)", line)
+                        if m:
+                            i = int(m.group(1))
+                            name = m.group(2).strip()
+                            gpus.append({
+                                "index": i,
+                                "name": name,
+                                "driver": "unknown",
+                                "icd_path": None,
+                            })
+            except Exception:
+                pass
+
+        # 3) poslední fallback: seznam ICD souborů (může vrátit méně položek – jen použijeme, když není nic)
+        if not gpus:
+            for i, icd_path in enumerate(self._list_vulkan_icd_files()):
+                gpus.append({
+                    "index": i,
+                    "name": f"Vulkan Device {i} ({os.path.basename(icd_path)})",
+                    "driver": os.path.basename(icd_path),
+                    "icd_path": icd_path
+                })
+
         return gpus
     
     def _list_vulkan_icd_files(self) -> List[str]:
