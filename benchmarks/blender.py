@@ -266,11 +266,26 @@ class BlenderBenchmark(BaseBenchmark):
                 json_output = json.loads(result.stdout)
                 print(f"✅ Benchmark completed in {elapsed_time:.1f}s")
                 
-                # Extract scene results
+                # Extract scene results - handle both old and new JSON format
                 scene_results = {}
                 total_score = 0.0
                 
-                if "scenes" in json_output:
+                # New format: JSON array of scene objects
+                if isinstance(json_output, list):
+                    for scene_data in json_output:
+                        if "scene" in scene_data and "stats" in scene_data:
+                            scene_name = scene_data["scene"].get("label", "unknown")
+                            samples_per_minute = scene_data["stats"].get("samples_per_minute", 0.0)
+                            
+                            scene_results[scene_name.lower()] = {
+                                "samples_per_minute": samples_per_minute,
+                                "scene_name": scene_name
+                            }
+                            total_score += samples_per_minute
+                            print(f"📊 {scene_name}: {samples_per_minute:.2f} samples per minute")
+                
+                # Old format: scenes array in root object (fallback)
+                elif "scenes" in json_output:
                     for scene_data in json_output["scenes"]:
                         scene_name = scene_data.get("label", "unknown")
                         samples_per_minute = scene_data.get("result", {}).get("samples_per_minute", 0.0)
