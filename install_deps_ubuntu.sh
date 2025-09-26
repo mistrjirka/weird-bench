@@ -47,7 +47,7 @@ sudo apt install -y \
     libvulkan-dev \
     vulkan-tools \
     vulkan-utility-libraries-dev
-
+sudo apt install libxi6
 # Optional: Install GPU drivers (user can uncomment what they need)
 echo ""
 echo "💡 GPU Driver Installation (optional):"

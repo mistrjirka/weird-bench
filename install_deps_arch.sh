@@ -36,6 +36,8 @@ sudo pacman -S --needed \
     vulkan-headers \
     vulkan-validation-layers \
     shaderc
+sudo pacman -S --needed libxi
+
 
 # Additional Python packages via pip
 echo ""

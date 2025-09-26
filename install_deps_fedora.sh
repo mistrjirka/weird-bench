@@ -24,7 +24,7 @@ sudo dnf install -y \
     python3-pip \
     pkgconf-devel \
     pkgconf-devel
-
+sudo apt install libxi6
 # 7-Zip for compression benchmark
 echo ""
 echo "🗜️  Installing 7-Zip..."

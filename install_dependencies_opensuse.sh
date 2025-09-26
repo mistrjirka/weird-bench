@@ -26,6 +26,7 @@ sudo zypper install -y time
 # 7-Zip for compression benchmark
 echo "📦 Installing 7-Zip..."
 sudo zypper install -y p7zip
+sudo zypper install -y libXi6
 
 # Python dependencies
 echo "🐍 Installing Python dependencies..."
