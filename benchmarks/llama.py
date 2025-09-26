@@ -705,6 +705,11 @@ class LlamaBenchmark(BaseBenchmark):
                         print(f"🎯 GPU selection: {gpu_env}")
                     result = self._run_benchmark_command(cmd, "gpu", p_size, g_size, 99, gpu_env)
                     result["gpu_device"] = gpu_device
+                    
+                    # Override gpu_info with specific GPU name instead of comma-separated list
+                    if "metrics" in result and "system_info" in result["metrics"]:
+                        result["metrics"]["system_info"]["gpu_info"] = gpu_device['name']
+                    
                     results["runs_gpu"].append(result)
 
             print(f"✅ Completed testing GPU: {gpu_device['name']}")
