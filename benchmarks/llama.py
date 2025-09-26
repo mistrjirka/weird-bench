@@ -769,24 +769,56 @@ class LlamaBenchmark(BaseBenchmark):
             try:
                 gpu_binary = self.results["build"]["vulkan_bench_binary"]
                 
-                for p_size in prompt_sizes:
-                    for g_size in generation_sizes:
-                        print(f"Running GPU benchmark: prompt={p_size}, generation={g_size}")
+                # Determine which GPUs to test
+                gpus_to_test = []
+                if self.gpu_device_index is not None:
+                    # Specific GPU selected via command line
+                    gpus_to_test = [gpu for gpu in self.available_gpus if gpu['index'] == self.gpu_device_index]
+                    if not gpus_to_test:
+                        print(f"⚠️  Selected GPU index {self.gpu_device_index} not found in available GPUs")
+                        gpus_to_test = self.available_gpus[:1] if self.available_gpus else []
+                else:
+                    # No specific GPU selected, test all available GPUs
+                    gpus_to_test = self.available_gpus
+                
+                if not gpus_to_test:
+                    print("⚠️  No GPUs available for testing")
+                    results["gpu_skip_reason"] = "no_gpus_available"
+                else:
+                    print(f"🎯 Testing {len(gpus_to_test)} GPU(s): {[gpu['name'] for gpu in gpus_to_test]}")
+                    
+                    for gpu_device in gpus_to_test:
+                        print(f"\n🔄 Testing GPU: {gpu_device['name']} (Index: {gpu_device['index']})")
                         
-                        cmd = [
-                            gpu_binary,
-                            "-m", self.project_model_path,
-                            "-p", str(p_size),
-                            "-n", str(g_size)
-                        ]
+                        # Set GPU selection for this specific GPU
+                        self.set_gpu_selection(gpu_device['index'], gpu_device.get('icd_path'))
                         
-                        # Add GPU selection environment variables
-                        gpu_env = self._get_gpu_env_vars()
-                        if gpu_env:
-                            print(f"🎯 GPU selection: {gpu_env}")
+                        for p_size in prompt_sizes:
+                            for g_size in generation_sizes:
+                                print(f"Running GPU benchmark: prompt={p_size}, generation={g_size}")
+                                
+                                cmd = [
+                                    gpu_binary,
+                                    "-m", self.project_model_path,
+                                    "-p", str(p_size),
+                                    "-n", str(g_size)
+                                ]
+                                
+                                # Add GPU selection environment variables
+                                gpu_env = self._get_gpu_env_vars()
+                                if gpu_env:
+                                    print(f"🎯 GPU selection: {gpu_env}")
+                                
+                                result = self._run_benchmark_command(cmd, "gpu", p_size, g_size, 99, gpu_env)
+                                # Add GPU info to the result
+                                result["gpu_device"] = gpu_device
+                                results["runs_gpu"].append(result)
                         
-                        result = self._run_benchmark_command(cmd, "gpu", p_size, g_size, 99, gpu_env)
-                        results["runs_gpu"].append(result)
+                        print(f"✅ Completed testing GPU: {gpu_device['name']}")
+                    
+                    # Reset GPU selection to original state
+                    self.set_gpu_selection(self.gpu_device_index, self.vk_driver_files)
+                    
             except Exception as e:
                 print(f"❌ Failed GPU benchmarking: {e}")
                 results["gpu_skip_reason"] = "gpu_benchmark_failed"
