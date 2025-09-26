@@ -124,41 +124,51 @@ class ReversanBenchmark(BaseBenchmark):
         
         raise RuntimeError("No 'reversan*' binary found in repo root.")
     
-    def _get_cpu_count(self) -> int:
-        """Get number of physical CPU cores available."""
+    def _get_cpu_counts(self) -> tuple[int, int]:
+        """Get the number of logical and physical CPU cores available."""
+        logical_cores = 4  # Default fallback
+        physical_cores = 2  # Default fallback
+        
+        try:
+            import multiprocessing
+            logical_cores = multiprocessing.cpu_count()
+            print(f"Detected {logical_cores} logical CPU cores (threads)")
+        except:
+            print("Could not detect logical CPU count, defaulting to 4")
+        
         try:
             import psutil
             physical_cores = psutil.cpu_count(logical=False)
             if physical_cores:
                 print(f"Detected {physical_cores} physical CPU cores")
-                return physical_cores
+            else:
+                # Fallback estimate
+                physical_cores = max(1, logical_cores // 2)
+                print(f"Estimated {physical_cores} physical cores (from {logical_cores} logical)")
         except ImportError:
-            pass
+            # Fallback to logical cores divided by 2 (assuming hyperthreading)
+            physical_cores = max(1, logical_cores // 2)
+            print(f"Estimated {physical_cores} physical cores (from {logical_cores} logical)")
         
-        # Fallback to logical cores divided by 2 (assuming hyperthreading)
-        try:
-            import multiprocessing
-            logical_cores = multiprocessing.cpu_count()
-            physical_estimate = max(1, logical_cores // 2)
-            print(f"Estimated {physical_estimate} physical cores (from {logical_cores} logical)")
-            return physical_estimate
-        except (ImportError, NotImplementedError):
-            # Final fallback
-            print("Could not detect CPU count, defaulting to 4 cores")
-            return 4
+        return logical_cores, physical_cores
     
-    def _get_thread_test_counts(self, max_threads: int) -> List[int]:
-        """Generate thread counts for testing in halving pattern (max, max/2, max/4, ..., 1)."""
-        if max_threads <= 0:
+    def _get_thread_test_counts(self, logical_cores: int, physical_cores: int) -> List[int]:
+        """Generate thread counts for testing starting from logical cores, halving down, and including physical cores if needed."""
+        if logical_cores <= 0:
             return [1]
         
         thread_counts = []
-        current = max_threads
+        current = logical_cores
         
-        # Start from max and halve until we reach 1
+        # Start from logical cores and halve until we reach 1
         while current >= 1:
             thread_counts.append(current)
             current //= 2
+        
+        # Add physical cores if they don't already exist in the halving pattern
+        if physical_cores not in thread_counts and physical_cores > 1:
+            thread_counts.append(physical_cores)
+            print(f"Added physical core count {physical_cores} to test list")
         
         # Ensure we always test with 1 thread (if not already included)
         if thread_counts[-1] != 1:
@@ -166,7 +176,16 @@ class ReversanBenchmark(BaseBenchmark):
         
         # Sort in descending order for cleaner output
         thread_counts.sort(reverse=True)
-        return thread_counts
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_thread_counts = []
+        for count in thread_counts:
+            if count not in seen:
+                seen.add(count)
+                unique_thread_counts.append(count)
+        
+        return unique_thread_counts
     
     def _reversan_supports_threads(self, bin_path: str) -> bool:
         """Check if the binary supports threads."""
@@ -227,8 +246,8 @@ class ReversanBenchmark(BaseBenchmark):
                 })
         
         # Threads sweep tests @ depth 11
-        max_threads = self._get_cpu_count()
-        thread_counts = self._get_thread_test_counts(max_threads)
+        logical_cores, physical_cores = self._get_cpu_counts()
+        thread_counts = self._get_thread_test_counts(logical_cores, physical_cores)
         print(f"\n=== Running threads sweep tests {thread_counts} at depth 11 with {runs} run(s) each ===")
         for t in thread_counts:
             if not threads_supported:
