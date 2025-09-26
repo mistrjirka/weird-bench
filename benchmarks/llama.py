@@ -156,6 +156,11 @@ class LlamaBenchmark(BaseBenchmark):
         self.results["meta"]["repo"] = self.repo_url
         self.results["meta"]["model_url"] = self.model_url
         
+        # GPU selection parameters
+        self.gpu_device_index = None  # GGML_VULKAN_DEVICE index (0, 1, 2...)
+        self.vk_driver_files = None   # VK_DRIVER_FILES path for specific driver
+        self.available_gpus = []      # List of detected GPUs
+        
         # Generate unique build ID for cold builds
         import uuid
         self.build_id = str(uuid.uuid4())[:8]
@@ -211,6 +216,16 @@ class LlamaBenchmark(BaseBenchmark):
         print("🔍 Checking system dependencies...")
         self._check_dependencies()
         print("✅ All required dependencies found!")
+        
+        # Detect available GPUs
+        print("🎮 Detecting available GPUs...")
+        self.available_gpus = self._detect_available_gpus()
+        if self.available_gpus:
+            print(f"✅ Found {len(self.available_gpus)} Vulkan GPU(s):")
+            for gpu in self.available_gpus:
+                print(f"   • Device {gpu['index']}: {gpu['name']} (Driver: {gpu['driver']})")
+        else:
+            print("⚠️  No Vulkan GPUs detected")
         
         # Create shared models directory
         os.makedirs(self.shared_models_dir, exist_ok=True)
@@ -547,6 +562,154 @@ class LlamaBenchmark(BaseBenchmark):
         except Exception:
             return None
     
+    def _detect_available_gpus(self) -> List[Dict[str, Any]]:
+        """Detect available Vulkan GPUs using vulkaninfo."""
+        gpus = []
+        try:
+            # Run vulkaninfo to get GPU information
+            result = subprocess.run(["vulkaninfo"], capture_output=True, text=True, timeout=30)
+            if result.returncode == 0:
+                output = result.stdout
+                
+                # Parse GPU information from vulkaninfo output
+                gpu_blocks = []
+                current_gpu = None
+                
+                for line in output.split('\n'):
+                    line = line.strip()
+                    if line.startswith('GPU id'):
+                        if current_gpu:
+                            gpu_blocks.append(current_gpu)
+                        current_gpu = {'id': None, 'name': '', 'driver': ''}
+                        # Extract GPU id
+                        id_match = re.search(r'GPU id\s*:\s*(\d+)', line)
+                        if id_match:
+                            current_gpu['id'] = int(id_match.group(1))
+                    elif line.startswith('deviceName'):
+                        name_match = re.search(r'deviceName\s*=\s*(.+)', line)
+                        if name_match and current_gpu:
+                            current_gpu['name'] = name_match.group(1).strip()
+                    elif 'driverName' in line and current_gpu:
+                        driver_match = re.search(r'driverName\s*=\s*(.+)', line)
+                        if driver_match:
+                            current_gpu['driver'] = driver_match.group(1).strip()
+                
+                if current_gpu:
+                    gpu_blocks.append(current_gpu)
+                
+                # Convert to our format
+                for gpu in gpu_blocks:
+                    if gpu['id'] is not None and gpu['name']:
+                        gpus.append({
+                            'index': gpu['id'],
+                            'name': gpu['name'],
+                            'driver': gpu['driver'],
+                            'icd_path': self._get_icd_path_for_driver(gpu['driver'])
+                        })
+            
+            # Fallback: try to detect from available ICD files
+            if not gpus:
+                icd_files = self._list_vulkan_icd_files()
+                for i, icd_path in enumerate(icd_files):
+                    gpus.append({
+                        'index': i,
+                        'name': f'Vulkan Device {i} ({os.path.basename(icd_path)})',
+                        'driver': os.path.basename(icd_path),
+                        'icd_path': icd_path
+                    })
+                        
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            # vulkaninfo not available, try fallback detection
+            icd_files = self._list_vulkan_icd_files()
+            for i, icd_path in enumerate(icd_files):
+                gpus.append({
+                    'index': i,
+                    'name': f'Vulkan Device {i} ({os.path.basename(icd_path)})',
+                    'driver': os.path.basename(icd_path),
+                    'icd_path': icd_path
+                })
+        
+        return gpus
+    
+    def _list_vulkan_icd_files(self) -> List[str]:
+        """List available Vulkan ICD files."""
+        icd_paths = []
+        common_icd_dirs = [
+            '/usr/share/vulkan/icd.d',
+            '/etc/vulkan/icd.d',
+            '/usr/local/share/vulkan/icd.d'
+        ]
+        
+        for icd_dir in common_icd_dirs:
+            if os.path.exists(icd_dir):
+                try:
+                    for file in os.listdir(icd_dir):
+                        if file.endswith('.json'):
+                            icd_paths.append(os.path.join(icd_dir, file))
+                except PermissionError:
+                    continue
+        
+        return icd_paths
+    
+    def _get_icd_path_for_driver(self, driver_name: str) -> Optional[str]:
+        """Get ICD path for a specific driver."""
+        icd_files = self._list_vulkan_icd_files()
+        
+        # Map common driver names to ICD files
+        driver_mappings = {
+            'NVIDIA': ['nvidia_icd', 'nvidia'],
+            'AMD': ['radeon_icd', 'amd_icd', 'amdvlk'],
+            'Intel': ['intel_icd', 'intel'],
+            'Mesa': ['lvp_icd']  # Lavapipe software rasterizer
+        }
+        
+        for driver_key, patterns in driver_mappings.items():
+            if driver_key.lower() in driver_name.lower():
+                for icd_file in icd_files:
+                    icd_basename = os.path.basename(icd_file).lower()
+                    if any(pattern in icd_basename for pattern in patterns):
+                        return icd_file
+        
+        return None
+    
+    def set_gpu_selection(self, gpu_device_index: Optional[int] = None, vk_driver_files: Optional[str] = None) -> None:
+        """Set GPU selection parameters for Vulkan benchmarking.
+        
+        Args:
+            gpu_device_index: GGML_VULKAN_DEVICE index (0, 1, 2...) or None for auto-selection
+            vk_driver_files: Path to Vulkan ICD file to force specific driver, or None for auto-detection
+        """
+        self.gpu_device_index = gpu_device_index
+        self.vk_driver_files = vk_driver_files
+        
+        if gpu_device_index is not None:
+            print(f"🎯 Selected GPU device index: {gpu_device_index}")
+            if self.available_gpus:
+                matching_gpus = [gpu for gpu in self.available_gpus if gpu['index'] == gpu_device_index]
+                if matching_gpus:
+                    gpu = matching_gpus[0]
+                    print(f"   📋 GPU details: {gpu['name']} (Driver: {gpu['driver']})")
+                else:
+                    print(f"   ⚠️  Warning: No GPU found with index {gpu_device_index}")
+        
+        if vk_driver_files:
+            print(f"🔧 Forcing Vulkan driver: {vk_driver_files}")
+            if not os.path.exists(vk_driver_files):
+                print(f"   ⚠️  Warning: ICD file not found: {vk_driver_files}")
+    
+    def _get_gpu_env_vars(self) -> Dict[str, str]:
+        """Get environment variables for GPU selection."""
+        env = {}
+        
+        if self.vk_driver_files:
+            env['VK_DRIVER_FILES'] = self.vk_driver_files
+            env['VK_ICD_FILENAMES'] = self.vk_driver_files  # Fallback for older Vulkan loaders
+        
+        if self.gpu_device_index is not None:
+            env['GGML_VULKAN_DEVICE'] = str(self.gpu_device_index)
+        
+        return env
+    
     def benchmark(self, args: Any = None) -> Dict[str, Any]:
         """Run the Llama.cpp benchmarks."""
         # Note: We built both versions, but Vulkan build overwrote CPU build
@@ -557,6 +720,14 @@ class LlamaBenchmark(BaseBenchmark):
             "runs_cpu": [],
             "runs_gpu": [],
         }
+        
+        # Add GPU selection info to results
+        if self.gpu_device_index is not None or self.vk_driver_files:
+            results["gpu_selection"] = {
+                "device_index": self.gpu_device_index,
+                "vk_driver_files": self.vk_driver_files,
+                "available_gpus": self.available_gpus
+            }
         
         # Limited test configurations as requested
         prompt_sizes = [512]
@@ -609,7 +780,12 @@ class LlamaBenchmark(BaseBenchmark):
                             "-n", str(g_size)
                         ]
                         
-                        result = self._run_benchmark_command(cmd, "gpu", p_size, g_size, 99)
+                        # Add GPU selection environment variables
+                        gpu_env = self._get_gpu_env_vars()
+                        if gpu_env:
+                            print(f"🎯 GPU selection: {gpu_env}")
+                        
+                        result = self._run_benchmark_command(cmd, "gpu", p_size, g_size, 99, gpu_env)
                         results["runs_gpu"].append(result)
             except Exception as e:
                 print(f"❌ Failed GPU benchmarking: {e}")
@@ -622,7 +798,7 @@ class LlamaBenchmark(BaseBenchmark):
         return results
     
     def _run_benchmark_command(self, cmd: List[str], run_type: str, prompt_size: int, 
-                              generation_size: int, ngl: int) -> Dict[str, Any]:
+                              generation_size: int, ngl: int, gpu_env: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         """Run a single benchmark command and parse results."""
         start_time = time.perf_counter()
         
@@ -631,7 +807,14 @@ class LlamaBenchmark(BaseBenchmark):
         
         try:
             print(f"🏃 Running {run_type} benchmark: prompt={prompt_size}, gen={generation_size}, ngl={ngl}")
-            result = self.run_command(json_cmd, cwd=self.project_dir, check=False)
+            
+            # Prepare environment variables
+            env = os.environ.copy()
+            if gpu_env:
+                env.update(gpu_env)
+                print(f"🎯 Using GPU environment: {gpu_env}")
+            
+            result = self.run_command_with_env(json_cmd, env, cwd=self.project_dir, check=False)
             elapsed_time = time.perf_counter() - start_time
             
             if result.returncode != 0:

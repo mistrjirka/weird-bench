@@ -1,6 +1,17 @@
 #!/usr/bin/env python3
 """
-Main benchmark runner that orchestrates all benchmarks.
+Main benchmark runner that orchestrates            try:
+                print(f"\n{'='*60}")
+                print(f"Starting {benchmark_name} benchmark...")
+                print(f"{'='*60}")
+                
+                # Special handling for llama benchmark GPU selection
+                if benchmark_name == "llama" and (args.gpu_device is not None or args.vk_driver):
+                    benchmark = benchmark_class(output_dir)
+                    benchmark.set_gpu_selection(args.gpu_device, args.vk_driver)
+                    results = benchmark.run(args)
+                else:
+                    results = runner.run_benchmark(benchmark_name, args)enchmarks.
 """
 import argparse
 import json
@@ -40,6 +51,13 @@ class BenchmarkRunner:
         
         benchmark_class = self.benchmarks[benchmark_name]
         benchmark = benchmark_class(self.output_dir)
+        
+        # Apply GPU selection for llama benchmark if specified
+        if benchmark_name == "llama" and hasattr(benchmark, 'set_gpu_selection'):
+            gpu_device = getattr(args, 'gpu_device', None)
+            vk_driver = getattr(args, 'vk_driver', None)
+            if gpu_device is not None or vk_driver:
+                benchmark.set_gpu_selection(gpu_device, vk_driver)
         
         return benchmark.run(args)
     
@@ -419,7 +437,24 @@ def main():
     parser.add_argument(
         "--api-url",
         default="https://weirdbench.eu/api",
-        help="API URL for uploading results (for Docker development environment)"
+        help="API endpoint for uploading results"
+    )
+    
+    parser.add_argument(
+        "--gpu-device",
+        type=int,
+        help="Select specific GPU device for Vulkan benchmarking (0, 1, 2...). Use --list-gpus to see available devices."
+    )
+    
+    parser.add_argument(
+        "--vk-driver",
+        help="Force specific Vulkan ICD driver file (e.g., /usr/share/vulkan/icd.d/nvidia_icd.json)"
+    )
+    
+    parser.add_argument(
+        "--list-gpus",
+        action="store_true",
+        help="List available Vulkan GPU devices and exit"
     )
     
     args = parser.parse_args()
@@ -429,6 +464,33 @@ def main():
         sys.exit(1)
     
     runner = BenchmarkRunner(args.output_dir, args.api_url)
+    
+    # Handle GPU listing
+    if args.list_gpus:
+        print("🎮 Detecting available Vulkan GPU devices...")
+        try:
+            # Create a temporary llama benchmark instance to detect GPUs
+            from benchmarks.llama import LlamaBenchmark
+            temp_benchmark = LlamaBenchmark(args.output_dir)
+            temp_benchmark.setup()
+            
+            if temp_benchmark.available_gpus:
+                print(f"\n✅ Found {len(temp_benchmark.available_gpus)} Vulkan GPU device(s):")
+                print()
+                for gpu in temp_benchmark.available_gpus:
+                    print(f"  Device {gpu['index']}: {gpu['name']}")
+                    print(f"    Driver: {gpu['driver']}")
+                    if gpu['icd_path']:
+                        print(f"    ICD File: {gpu['icd_path']}")
+                    print()
+                print("💡 Use --gpu-device N to select a specific GPU device")
+                print("💡 Use --vk-driver PATH to force a specific Vulkan driver")
+            else:
+                print("\n❌ No Vulkan GPU devices detected")
+                print("💡 Make sure Vulkan drivers are installed and vulkaninfo is available")
+        except Exception as e:
+            print(f"❌ Failed to detect GPUs: {e}")
+        return 0
     
     if args.list:
         print("Available benchmarks:")
@@ -445,6 +507,7 @@ def main():
         print("    • CPU inference tests (ngl=0) with various prompt/generation sizes")
         print("    • GPU inference tests (ngl=99) if Vulkan is available")
         print("    • Each build gets clean environment, model copied from cache")
+        print("    • Supports GPU device selection with --gpu-device and --vk-driver")
         print()
         print("  7zip - 7-Zip compression benchmark")
         print("    • Tests compression performance with multi-threading")
@@ -464,6 +527,11 @@ def main():
         print("    • Efficient execution with shared model caching")
         print("    • Combined results and plotting")
         print()
+        print("GPU Selection Options (for llama benchmark):")
+        print("  --gpu-device N        Select GPU device by index (0, 1, 2...)")
+        print("  --vk-driver PATH      Force specific Vulkan driver ICD file")
+        print("  --list-gpus           List available Vulkan GPU devices")
+        print()
         print("Upload options:")
         print("  --upload                Upload results after benchmarking")
         print("  --upload-existing       Upload existing results from results/ folder")
@@ -478,9 +546,19 @@ def main():
         elif args.combine_results:
             runner.combine_results_from_files()
         elif args.benchmark == "all":
+            # Special handling for llama benchmark in "all" mode
+            if args.gpu_device is not None or args.vk_driver:
+                print("🎯 GPU selection specified - configuring llama benchmark...")
+                # We'll handle GPU selection in the individual benchmark loop
             runner.run_all_benchmarks(args)
         else:
-            result = runner.run_benchmark(args.benchmark, args)
+            # Single benchmark
+            if args.benchmark == "llama" and (args.gpu_device is not None or args.vk_driver):
+                benchmark = runner.benchmarks[args.benchmark](args.output_dir)
+                benchmark.set_gpu_selection(args.gpu_device, args.vk_driver)
+                result = benchmark.run(args)
+            else:
+                result = runner.run_benchmark(args.benchmark, args)
             # Save individual result file even for single benchmark runs
             individual_results_file = os.path.join(args.output_dir, f"{args.benchmark}_results.json")
             with open(individual_results_file, "w") as f:
