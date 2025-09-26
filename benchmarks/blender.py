@@ -113,7 +113,7 @@ class BlenderBenchmark(BaseBenchmark):
         print("🔍 Detecting available devices...")
         
         try:
-            cmd = [self.launcher_path, "--blender-version", "4.5.0", "devices"]
+            cmd = [self.launcher_path, "devices", "-b", "4.5.0"]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=60,
                                   cwd=os.path.dirname(self.launcher_path))
             
@@ -122,6 +122,7 @@ class BlenderBenchmark(BaseBenchmark):
                 return []
             
             devices = []
+            seen_devices = {}  # Track first framework seen for each device
             lines = result.stdout.strip().split('\n')
             
             for line in lines:
@@ -129,15 +130,30 @@ class BlenderBenchmark(BaseBenchmark):
                 if not line:
                     continue
                     
-                # Parse format: "Device Name    Framework"
-                parts = line.rsplit(None, 1)  # Split from right, max 1 split
+                # Parse format: "Device Name\tFramework"
+                parts = line.rsplit('\t', 1)  # Split by tab from right
                 if len(parts) == 2:
-                    device_name, framework = parts
+                    device_name, framework = parts[0].strip(), parts[1].strip()
+                elif len(parts) == 1:
+                    # Fallback to whitespace split if no tab
+                    parts = line.rsplit(None, 1)
+                    if len(parts) == 2:
+                        device_name, framework = parts[0].strip(), parts[1].strip()
+                    else:
+                        continue
+                else:
+                    continue
+                
+                # Only use first framework seen for each device name
+                if device_name not in seen_devices:
+                    seen_devices[device_name] = framework
                     devices.append({
-                        "name": device_name.strip(),
-                        "framework": framework.strip()
+                        "name": device_name,
+                        "framework": framework
                     })
-                    print(f"📱 Found device: {device_name.strip()} ({framework.strip()})")
+                    print(f"📱 Found device: {device_name} ({framework})")
+                else:
+                    print(f"🔄 Skipping duplicate device: {device_name} ({framework}), already using {seen_devices[device_name]}")
             
             return devices
             
@@ -171,17 +187,18 @@ class BlenderBenchmark(BaseBenchmark):
         print("✅ All scenes downloaded successfully")
         return True
     
-    def _run_blender_benchmark(self, device_framework: str, scenes: List[str] = None, max_retries: int = 3) -> Dict[str, Any]:
+    def _run_blender_benchmark(self, device_name: str, device_framework: str, scenes: List[str] = None, max_retries: int = 3) -> Dict[str, Any]:
         """Run Blender benchmark with specific device and scenes using JSON output, with retry mechanism."""
         if scenes is None:
             scenes = ["monster", "junkshop", "classroom"]
         
         scenes_str = " ".join(scenes)
-        print(f"🎬 Running benchmark on {device_framework} with scenes: {scenes_str}")
+        print(f"🎬 Running benchmark on {device_name} ({device_framework}) with scenes: {scenes_str}")
         
         # Download required scenes before benchmarking
         if not self._download_scenes(scenes):
             return {
+                "device_name": device_name,
                 "device_framework": device_framework,
                 "scenes": scenes,
                 "success": False,
@@ -191,14 +208,14 @@ class BlenderBenchmark(BaseBenchmark):
         # Retry mechanism
         for attempt in range(max_retries):
             if attempt > 0:
-                print(f"🔄 Retry attempt {attempt + 1}/{max_retries} for {device_framework}")
+                print(f"🔄 Retry attempt {attempt + 1}/{max_retries} for {device_name} ({device_framework})")
             
             start_time = time.perf_counter()
-            result = self._run_single_blender_attempt(device_framework, scenes, start_time)
+            result = self._run_single_blender_attempt(device_name, device_framework, scenes, start_time)
             
             if result["success"]:
                 if attempt > 0:
-                    print(f"✅ {device_framework} succeeded on attempt {attempt + 1}")
+                    print(f"✅ {device_name} ({device_framework}) succeeded on attempt {attempt + 1}")
                 return result
             else:
                 print(f"❌ Attempt {attempt + 1} failed: {result.get('error', 'Unknown error')}")
@@ -206,10 +223,10 @@ class BlenderBenchmark(BaseBenchmark):
                     print(f"⏳ Waiting 5 seconds before retry...")
                     time.sleep(5)
         
-        print(f"❌ All {max_retries} attempts failed for {device_framework}")
+        print(f"❌ All {max_retries} attempts failed for {device_name} ({device_framework})")
         return result  # Return the last failed attempt
     
-    def _run_single_blender_attempt(self, device_framework: str, scenes: List[str], start_time: float) -> Dict[str, Any]:
+    def _run_single_blender_attempt(self, device_name: str, device_framework: str, scenes: List[str], start_time: float) -> Dict[str, Any]:
         """Run a single Blender benchmark attempt."""
         
         try:
@@ -219,6 +236,7 @@ class BlenderBenchmark(BaseBenchmark):
                 *scenes,  # Expand scenes list
                 "--blender-version", "4.5.0",
                 "--device-type", device_framework,
+                "--device-name", device_name,
                 "--json"
             ]
             
@@ -234,6 +252,7 @@ class BlenderBenchmark(BaseBenchmark):
                 print(f"❌ Benchmark failed with return code {result.returncode}")
                 print(f"STDERR: {result.stderr}")
                 return {
+                    "device_name": device_name,
                     "device_framework": device_framework,
                     "scenes": scenes,
                     "success": False,
@@ -264,6 +283,7 @@ class BlenderBenchmark(BaseBenchmark):
                         print(f"📊 {scene_name}: {samples_per_minute:.2f} samples per minute")
                 
                 return {
+                    "device_name": device_name,
                     "device_framework": device_framework,
                     "scenes": scenes,
                     "success": True,
@@ -278,6 +298,7 @@ class BlenderBenchmark(BaseBenchmark):
                 print(f"❌ Failed to parse JSON output: {e}")
                 print(f"Raw output: {result.stdout[:500]}...")
                 return {
+                    "device_name": device_name,
                     "device_framework": device_framework,
                     "scenes": scenes,
                     "success": False,
@@ -289,6 +310,7 @@ class BlenderBenchmark(BaseBenchmark):
         except subprocess.TimeoutExpired:
             print(f"❌ Benchmark timed out after 20 minutes")
             return {
+                "device_name": device_name,
                 "device_framework": device_framework,
                 "scenes": scenes,
                 "success": False,
@@ -300,6 +322,7 @@ class BlenderBenchmark(BaseBenchmark):
             elapsed_time = end_time - start_time
             print(f"❌ Benchmark failed: {e}")
             return {
+                "device_name": device_name,
                 "device_framework": device_framework,
                 "scenes": scenes,
                 "success": False,
@@ -373,7 +396,7 @@ class BlenderBenchmark(BaseBenchmark):
                     print(f"🔄 Retry attempt {attempt}/3 for {device_name} ({framework})")
                     time.sleep(2 * attempt)  # Exponential backoff: 2s, 4s, 6s
                 
-                result = self._run_blender_benchmark(framework)
+                result = self._run_blender_benchmark(device_name, framework)
                 
                 if result["success"]:
                     if attempt > 1:
