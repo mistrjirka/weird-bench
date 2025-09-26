@@ -144,9 +144,32 @@ class BlenderBenchmark(BaseBenchmark):
         except subprocess.TimeoutExpired:
             print("❌ Device detection timed out")
             return []
-        except Exception as e:
-            print(f"❌ Device detection error: {e}")
-            return []
+    def _download_scenes(self, scenes: List[str]) -> bool:
+        """Download required scenes before running benchmark."""
+        print("🔽 Downloading required scenes...")
+        
+        for scene in scenes:
+            print(f"📥 Downloading scene: {scene}")
+            try:
+                cmd = [self.launcher_path, "scenes", "download", scene, "-b", "4.5.0"]
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=300,
+                                      cwd=os.path.dirname(self.launcher_path))
+                
+                if result.returncode == 0:
+                    print(f"✅ Scene '{scene}' downloaded successfully")
+                else:
+                    print(f"❌ Failed to download scene '{scene}': {result.stderr}")
+                    return False
+                    
+            except subprocess.TimeoutExpired:
+                print(f"❌ Scene '{scene}' download timed out")
+                return False
+            except Exception as e:
+                print(f"❌ Scene '{scene}' download error: {e}")
+                return False
+        
+        print("✅ All scenes downloaded successfully")
+        return True
     
     def _run_blender_benchmark(self, device_framework: str, scenes: List[str] = None, max_retries: int = 3) -> Dict[str, Any]:
         """Run Blender benchmark with specific device and scenes using JSON output, with retry mechanism."""
@@ -155,6 +178,15 @@ class BlenderBenchmark(BaseBenchmark):
         
         scenes_str = " ".join(scenes)
         print(f"🎬 Running benchmark on {device_framework} with scenes: {scenes_str}")
+        
+        # Download required scenes before benchmarking
+        if not self._download_scenes(scenes):
+            return {
+                "device_framework": device_framework,
+                "scenes": scenes,
+                "success": False,
+                "error": "Failed to download required scenes"
+            }
         
         # Retry mechanism
         for attempt in range(max_retries):
