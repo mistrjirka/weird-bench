@@ -24,16 +24,13 @@ sudo apt install -y \
     python3-pip \
     python3-psutil \
     pkg-config \
-    libcurl4-openssl-dev
-
-# Python packages (system packages)
-echo ""
-echo "🐍 Installing Python packages..."
-sudo apt install -y \
+    libcurl4-openssl-dev \
+    vulkan-tools \
     python3-matplotlib \
     python3-numpy \
     python3-requests \
-    python3-pexpect
+    python3-pexpect \
+    libxi6
 
 # 7-Zip for compression benchmark
 echo ""
@@ -47,7 +44,6 @@ sudo apt install -y \
     libvulkan-dev \
     vulkan-tools \
     vulkan-utility-libraries-dev
-sudo apt install libxi6
 # Optional: Install GPU drivers (user can uncomment what they need)
 echo ""
 echo "💡 GPU Driver Installation (optional):"

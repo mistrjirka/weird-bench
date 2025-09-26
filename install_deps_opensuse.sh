@@ -17,7 +17,8 @@ sudo zypper install -y \
     libcurl-devel \
     python3 \
     python3-pip \
-    pkg-config
+    pkg-config \
+    vulkan-tools
 
 # Time utility for detailed process metrics (used by Reversan benchmark)
 echo "📦 Installing GNU time..."

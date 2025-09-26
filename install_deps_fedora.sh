@@ -23,7 +23,8 @@ sudo dnf install -y \
     python3 \
     python3-pip \
     pkgconf-devel \
-    pkgconf-devel
+    pkgconf-devel \
+    vulkan-tools
 sudo apt install libxi6
 # 7-Zip for compression benchmark
 echo ""

@@ -22,7 +22,9 @@ sudo pacman -S --needed \
     git \
     python \
     python-pip \
-    pkgconf
+    pkgconf \
+    vulkan-tools
+
 
 # 7-Zip for compression benchmark
 echo ""
