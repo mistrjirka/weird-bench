@@ -231,41 +231,6 @@ class SevenZipBenchmark(BaseBenchmark):
         
         return logical_cores, physical_cores
     
-    def _get_thread_test_counts(self, logical_cores: int, physical_cores: int) -> List[int]:
-        """Generate thread counts for testing starting from logical cores, halving down, and including physical cores if needed."""
-        if logical_cores <= 0:
-            return [1]
-        
-        thread_counts = []
-        current = logical_cores
-        
-        # Start from logical cores and halve until we reach 1
-        while current >= 1:
-            thread_counts.append(current)
-            current //= 2
-        
-        # Add physical cores if they don't already exist in the halving pattern
-        if physical_cores not in thread_counts and physical_cores > 1:
-            thread_counts.append(physical_cores)
-            print(f"Added physical core count {physical_cores} to test list")
-        
-        # Ensure we always test with 1 thread (if not already included)
-        if thread_counts[-1] != 1:
-            thread_counts.append(1)
-        
-        # Sort in descending order for cleaner output
-        thread_counts.sort(reverse=True)
-        
-        # Remove duplicates while preserving order
-        seen = set()
-        unique_thread_counts = []
-        for count in thread_counts:
-            if count not in seen:
-                seen.add(count)
-                unique_thread_counts.append(count)
-        
-        return unique_thread_counts
-    
     def benchmark(self, args: Any = None) -> Dict[str, Any]:
         """Run 7-Zip benchmarks with different thread counts."""
         results = {
