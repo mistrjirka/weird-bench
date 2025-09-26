@@ -463,7 +463,8 @@ class LlamaBenchmark(BaseBenchmark):
                 return None
             data = r.stdout.strip()
             return json.loads(data)
-        except Exception:
+        except Exception as e:
+            print(f"Exception: {e}")
             return None
 
     def _detect_available_gpus(self) -> List[Dict[str, Any]]:
