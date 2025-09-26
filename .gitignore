@@ -9,6 +9,7 @@ results/
 llama.cpp/
 Reversan-Engine/
 blender-benchmark/
+results_laptop/
 
 # C extensions
 *.so
