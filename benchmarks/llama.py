@@ -763,7 +763,7 @@ class LlamaBenchmark(BaseBenchmark):
             results["cpu_build_timing"] = self.results["build"]["cpu_build_timing"]
 
         prompt_sizes = [512]  # Keep original prompt size
-        cpu_generation_sizes = [64]  # CPU uses smaller generation size
+        cpu_generation_sizes = [256]  # CPU uses smaller generation size
         gpu_generation_sizes = [512]  # GPU uses larger generation size for better performance measurement
 
         # CPU
