@@ -191,10 +191,62 @@ class LlamaBenchmark(BaseBenchmark):
             error_msg += "  ./install_dependencies_opensuse.sh\n"
             raise RuntimeError(error_msg)
 
+    def _check_vulkaninfo_functionality(self) -> None:
+        """Check that vulkaninfo works and can extract GPU information properly"""
+        if not shutil.which("vulkaninfo"):
+            raise RuntimeError(
+                "❌ vulkaninfo not found. This tool is required for GPU detection.\n"
+                "Install vulkan-tools package:\n"
+                "  Ubuntu/Debian: sudo apt install vulkan-tools\n"
+                "  Fedora/RHEL:   sudo dnf install vulkan-tools\n"
+                "  Arch Linux:    sudo pacman -S vulkan-tools\n"
+                "  openSUSE:      sudo zypper install vulkan-tools"
+            )
+        
+        # Test vulkaninfo functionality with the exact approach we'll use
+        try:
+            result = subprocess.run(
+                ["vulkaninfo"],
+                capture_output=True, text=True, timeout=30,
+                stderr=subprocess.DEVNULL  # Suppress warnings like the AWK script
+            )
+            
+            if result.returncode != 0:
+                raise RuntimeError(
+                    f"❌ vulkaninfo failed with exit code {result.returncode}.\n"
+                    "This usually means Vulkan drivers are not properly installed."
+                )
+            
+            output = result.stdout or ""
+            if not output.strip():
+                raise RuntimeError(
+                    "❌ vulkaninfo produced no output.\n"
+                    "This usually means Vulkan drivers are not properly installed."
+                )
+            
+            # Test our parsing logic
+            gpu_id_lines = [line for line in output.splitlines() if 'GPU id =' in line]
+            if not gpu_id_lines:
+                print("⚠️  vulkaninfo works but no 'GPU id = X (Name)' lines found.")
+                print("    This might indicate no GPUs or unusual vulkaninfo output format.")
+            else:
+                print(f"✅ vulkaninfo found {len(set(gpu_id_lines))} GPU entries")
+                
+        except subprocess.TimeoutExpired:
+            raise RuntimeError(
+                "❌ vulkaninfo timed out after 30 seconds.\n"
+                "This usually indicates driver or system issues."
+            )
+        except Exception as e:
+            raise RuntimeError(f"❌ Failed to run vulkaninfo: {e}")
+
     def setup(self, skip_build: bool = False) -> None:
         print("🔍 Checking system dependencies...")
         self._check_dependencies()
         print("✅ All required dependencies found!")
+
+        print("🔍 Verifying vulkaninfo functionality...")
+        self._check_vulkaninfo_functionality()
 
         print("🎮 Detecting available GPUs (deferred until after build)...")
         # GPU detection will be done after build when binaries are available
@@ -526,62 +578,6 @@ class LlamaBenchmark(BaseBenchmark):
                         "icd_path": None,
                     })
                     seen_devices.add(device_key)
-
-        # Fallback: try old parsing method for backwards compatibility
-        if not devices:
-            devices = self._parse_vulkaninfo_text_legacy(text)
-
-        return devices
-
-    def _parse_vulkaninfo_text_legacy(self, text: str) -> List[Dict[str, Any]]:
-        """
-        Legacy parsing method for vulkaninfo text output.
-        Finds blocks starting with 'GPU<N>:' and extracts deviceName.
-        """
-        devices: List[Dict[str, Any]] = []
-        lines = text.splitlines()
-
-        # Find GPU block starts
-        positions: List[tuple[int,int]] = []
-        for i, line in enumerate(lines):
-            m = re.match(r"\s*GPU\s*([0-9]+)\s*:", line)
-            if m:
-                positions.append((i, int(m.group(1))))
-
-        for idx, (start, gpu_index) in enumerate(positions):
-            end = positions[idx + 1][0] if idx + 1 < len(positions) else len(lines)
-            block = "\n".join(lines[start:end])
-
-            # deviceName = ...
-            name = None
-            m_name = re.search(r"deviceName\s*=\s*(.+)", block)
-            if m_name:
-                name = m_name.group(1).strip()
-            else:
-                # alternative format with colon (rare)
-                m_name2 = re.search(r"deviceName\s*:\s*(.+)", block)
-                if m_name2:
-                    name = m_name2.group(1).strip()
-
-            # driverName (ne vždy je k dispozici)
-            driver = None
-            m_drv = re.search(r"driverName\s*=\s*(.+)", block)
-            if m_drv:
-                driver = m_drv.group(1).strip()
-            else:
-                m_drv2 = re.search(r"driverName\s*:\s*(.+)", block)
-                if m_drv2:
-                    driver = m_drv2.group(1).strip()
-
-            if not name:
-                name = f"Vulkan Device {gpu_index}"
-
-            devices.append({
-                "index": gpu_index,
-                "name": name,
-                "driver": driver or "unknown",
-                "icd_path": None,
-            })
 
         return devices
 
