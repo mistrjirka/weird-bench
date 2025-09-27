@@ -1,0 +1,254 @@
+{
+  "benchmark_name": "llama",
+  "timestamp": 1758990666.5511894,
+  "results": {
+    "runs_cpu": [
+      {
+        "type": "cpu",
+        "prompt_size": 512,
+        "generation_size": 64,
+        "ngl": 0,
+        "returncode": 0,
+        "elapsed_seconds": 30.873580882998795,
+        "metrics": {
+          "system_info": {
+            "cpu_info": "AMD Ryzen AI 9 365 w/ Radeon 880M",
+            "gpu_info": "",
+            "backends": "CPU",
+            "model_type": "qwen3 4B IQ4_NL - 4.5 bpw",
+            "model_size": 2375386624,
+            "model_n_params": 4022468096,
+            "n_threads": 10,
+            "n_gpu_layers": 99
+          },
+          "prompt_processing": {
+            "avg_time_ns": 3254716645,
+            "avg_tokens_per_sec": 157.314027,
+            "stddev_time_ns": 18053730,
+            "stddev_tokens_per_sec": 0.871213,
+            "avg_time_ms": 3254.716645,
+            "samples_ns": [
+              3278253271,
+              3247258453,
+              3268863637,
+              3243917819,
+              3235290046
+            ],
+            "samples_ts": [
+              156.181,
+              157.671,
+              156.629,
+              157.834,
+              158.255
+            ]
+          },
+          "generation": {
+            "avg_time_ns": 2155474438,
+            "avg_tokens_per_sec": 29.698039,
+            "stddev_time_ns": 34712634,
+            "stddev_tokens_per_sec": 0.481244,
+            "avg_time_ms": 2155.474438,
+            "samples_ns": [
+              2113381157,
+              2121827390,
+              2179703090,
+              2180197649,
+              2182262907
+            ],
+            "samples_ts": [
+              30.2832,
+              30.1627,
+              29.3618,
+              29.3551,
+              29.3274
+            ]
+          },
+          "tokens_per_second": 29.698039,
+          "total_time_ms": 5410.191083
+        },
+        "essential_info": {
+          "build_commit": "234e2ff",
+          "model_type": "qwen3 4B IQ4_NL - 4.5 bpw",
+          "backends": "CPU",
+          "test_time": "2025-09-27T16:29:06Z"
+        }
+      }
+    ],
+    "runs_gpu": [
+      {
+        "type": "gpu",
+        "prompt_size": 512,
+        "generation_size": 512,
+        "ngl": 99,
+        "returncode": 0,
+        "elapsed_seconds": 89.65372007099904,
+        "metrics": {
+          "system_info": {
+            "cpu_info": "AMD Ryzen AI 9 365 w/ Radeon 880M",
+            "gpu_info": "AMD Radeon Graphics",
+            "backends": "Vulkan",
+            "model_type": "qwen3 4B IQ4_NL - 4.5 bpw",
+            "model_size": 2375386624,
+            "model_n_params": 4022468096,
+            "n_threads": 10,
+            "n_gpu_layers": 99
+          },
+          "prompt_processing": {
+            "avg_time_ns": 1066525837,
+            "avg_tokens_per_sec": 480.159969,
+            "stddev_time_ns": 16871906,
+            "stddev_tokens_per_sec": 7.632058,
+            "avg_time_ms": 1066.525837,
+            "samples_ns": [
+              1081699887,
+              1048031607,
+              1074361034,
+              1079996797,
+              1048539862
+            ],
+            "samples_ts": [
+              473.329,
+              488.535,
+              476.562,
+              474.075,
+              488.298
+            ]
+          },
+          "generation": {
+            "avg_time_ns": 16526062212,
+            "avg_tokens_per_sec": 30.982047,
+            "stddev_time_ns": 86375868,
+            "stddev_tokens_per_sec": 0.16264,
+            "avg_time_ms": 16526.062212,
+            "samples_ns": [
+              16568302665,
+              16580906865,
+              16595956512,
+              16386784528,
+              16498360493
+            ],
+            "samples_ts": [
+              30.9024,
+              30.8789,
+              30.8509,
+              31.2447,
+              31.0334
+            ]
+          },
+          "tokens_per_second": 30.982047,
+          "total_time_ms": 17592.588049
+        },
+        "essential_info": {
+          "build_commit": "234e2ff",
+          "model_type": "qwen3 4B IQ4_NL - 4.5 bpw",
+          "backends": "Vulkan",
+          "test_time": "2025-09-27T16:29:37Z"
+        },
+        "gpu_device": {
+          "index": 0,
+          "name": "AMD Radeon Graphics",
+          "driver": "RADV GFX1150",
+          "icd_path": null
+        }
+      }
+    ],
+    "device_runs": [
+      {
+        "device_name": "AMD Radeon Graphics",
+        "device_index": 0,
+        "device_driver": "RADV GFX1150",
+        "device_type": "gpu",
+        "runs": [
+          {
+            "prompt_size": 512,
+            "generation_size": 512,
+            "ngl": 99,
+            "returncode": 0,
+            "elapsed_seconds": 89.65372007099904,
+            "success": true,
+            "metrics": {
+              "system_info": {
+                "cpu_info": "AMD Ryzen AI 9 365 w/ Radeon 880M",
+                "gpu_info": "AMD Radeon Graphics",
+                "backends": "Vulkan",
+                "model_type": "qwen3 4B IQ4_NL - 4.5 bpw",
+                "model_size": 2375386624,
+                "model_n_params": 4022468096,
+                "n_threads": 10,
+                "n_gpu_layers": 99
+              },
+              "prompt_processing": {
+                "avg_time_ns": 1066525837,
+                "avg_tokens_per_sec": 480.159969,
+                "stddev_time_ns": 16871906,
+                "stddev_tokens_per_sec": 7.632058,
+                "avg_time_ms": 1066.525837,
+                "samples_ns": [
+                  1081699887,
+                  1048031607,
+                  1074361034,
+                  1079996797,
+                  1048539862
+                ],
+                "samples_ts": [
+                  473.329,
+                  488.535,
+                  476.562,
+                  474.075,
+                  488.298
+                ]
+              },
+              "generation": {
+                "avg_time_ns": 16526062212,
+                "avg_tokens_per_sec": 30.982047,
+                "stddev_time_ns": 86375868,
+                "stddev_tokens_per_sec": 0.16264,
+                "avg_time_ms": 16526.062212,
+                "samples_ns": [
+                  16568302665,
+                  16580906865,
+                  16595956512,
+                  16386784528,
+                  16498360493
+                ],
+                "samples_ts": [
+                  30.9024,
+                  30.8789,
+                  30.8509,
+                  31.2447,
+                  31.0334
+                ]
+              },
+              "tokens_per_second": 30.982047,
+              "total_time_ms": 17592.588049
+            },
+            "essential_info": {
+              "build_commit": "234e2ff",
+              "model_type": "qwen3 4B IQ4_NL - 4.5 bpw",
+              "backends": "Vulkan",
+              "test_time": "2025-09-27T16:29:37Z"
+            }
+          }
+        ],
+        "success": true
+      }
+    ],
+    "gpu_selection": {
+      "device_index": null,
+      "vk_driver_files": null,
+      "available_gpus": [
+        {
+          "index": 0,
+          "name": "AMD Radeon Graphics",
+          "driver": "RADV GFX1150",
+          "icd_path": null
+        }
+      ]
+    },
+    "cpu_build_timing": {
+      "config_time_seconds": 0.8327161030010757,
+      "build_time_seconds": 64.71219150300021,
+      "total_time_seconds": 65.54490760600129
+    }
+  }
+}

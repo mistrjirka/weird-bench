@@ -1,0 +1,481 @@
+{
+  "benchmark_name": "blender",
+  "timestamp": 1758986137.1150742,
+  "results": {
+    "meta": {
+      "benchmark_name": "blender",
+      "host": "localhost.localdomain",
+      "platform": "Linux-6.16.8-1-default-x86_64-with-glibc2.42",
+      "timestamp": 1758985905.4274113,
+      "benchmark_url": "https://download.blender.org/release/BlenderBenchmark2.0/launcher/benchmark-launcher-cli-3.1.0-linux.tar.gz"
+    },
+    "build": {
+      "launcher_path": "/home/jirka/programy/weird-bench/blender-benchmark/benchmark-launcher-cli",
+      "build_time_seconds": 0.0,
+      "notes": "Blender benchmark uses pre-built binaries"
+    },
+    "device_runs": [
+      {
+        "device_name": "AMD Ryzen AI 9 365 w/ Radeon 880M",
+        "device_framework": "CPU",
+        "scenes": [
+          "monster",
+          "junkshop",
+          "classroom"
+        ],
+        "success": true,
+        "elapsed_seconds": 110.17244802200003,
+        "scene_results": {
+          "monster": {
+            "samples_per_minute": 138.52725213648603,
+            "scene_name": "monster"
+          },
+          "junkshop": {
+            "samples_per_minute": 90.45693768252342,
+            "scene_name": "junkshop"
+          },
+          "classroom": {
+            "samples_per_minute": 66.11933256034216,
+            "scene_name": "classroom"
+          }
+        },
+        "total_score": 295.1035223793516,
+        "raw_json": [
+          {
+            "timestamp": "2025-09-27T15:12:21.627372+00:00",
+            "blender_version": {
+              "version": "4.5.0",
+              "build_date": "2025-07-15",
+              "build_time": "01:36:28",
+              "build_commit_date": "2025-07-14",
+              "build_commit_time": "17:45",
+              "build_hash": "8cb6b388974a",
+              "label": "4.5.0",
+              "checksum": "1188b95cc12321c770b631939f7c25a096910b6f884a990bf9c0f62d52b38aec"
+            },
+            "benchmark_launcher": {
+              "label": "3.1.0",
+              "checksum": "d2504fddc513b6b1ccbf18cb75aa381d21a543fe4662d790f24aa7275fa255e9"
+            },
+            "benchmark_script": {
+              "label": "3.1.1",
+              "checksum": "5a706e14279da13b2bed2dbb9e0a47c2588b9ea4f37cf8f9c7d79c8b7c634c1f"
+            },
+            "scene": {
+              "label": "monster",
+              "checksum": "8ff812a02f720433de1403dab447be9541eecca71cc919224a7790d017c1b2ce"
+            },
+            "system_info": {
+              "bitness": "64bit",
+              "machine": "x86_64",
+              "system": "Linux",
+              "dist_name": "openSUSE Tumbleweed",
+              "dist_version": "20250923",
+              "devices": [
+                {
+                  "type": "CPU",
+                  "name": "AMD Ryzen AI 9 365 w/ Radeon 880M"
+                },
+                {
+                  "type": "HIP",
+                  "name": "AMD Radeon Graphics",
+                  "is_display": false
+                }
+              ],
+              "num_cpu_sockets": 1,
+              "num_cpu_cores": 10,
+              "num_cpu_threads": 20
+            },
+            "device_info": {
+              "device_type": "CPU",
+              "compute_devices": [
+                {
+                  "type": "CPU",
+                  "name": "AMD Ryzen AI 9 365 w/ Radeon 880M"
+                }
+              ],
+              "num_cpu_threads": 20
+            },
+            "stats": {
+              "device_peak_memory": 634.34,
+              "number_of_samples": 70,
+              "time_for_samples": 30.318944,
+              "samples_per_minute": 138.52725213648603,
+              "total_render_time": 31.2563,
+              "render_time_no_sync": 30.3191,
+              "time_limit": 30
+            }
+          },
+          {
+            "timestamp": "2025-09-27T15:13:04.091212+00:00",
+            "blender_version": {
+              "version": "4.5.0",
+              "build_date": "2025-07-15",
+              "build_time": "01:36:28",
+              "build_commit_date": "2025-07-14",
+              "build_commit_time": "17:45",
+              "build_hash": "8cb6b388974a",
+              "label": "4.5.0",
+              "checksum": "1188b95cc12321c770b631939f7c25a096910b6f884a990bf9c0f62d52b38aec"
+            },
+            "benchmark_launcher": {
+              "label": "3.1.0",
+              "checksum": "d2504fddc513b6b1ccbf18cb75aa381d21a543fe4662d790f24aa7275fa255e9"
+            },
+            "benchmark_script": {
+              "label": "3.1.1",
+              "checksum": "5a706e14279da13b2bed2dbb9e0a47c2588b9ea4f37cf8f9c7d79c8b7c634c1f"
+            },
+            "scene": {
+              "label": "junkshop",
+              "checksum": "f5515a21a1337b908212d8d76733530df83014464a24c585ab7b96000da0cdce"
+            },
+            "system_info": {
+              "bitness": "64bit",
+              "machine": "x86_64",
+              "system": "Linux",
+              "dist_name": "openSUSE Tumbleweed",
+              "dist_version": "20250923",
+              "devices": [
+                {
+                  "type": "CPU",
+                  "name": "AMD Ryzen AI 9 365 w/ Radeon 880M"
+                },
+                {
+                  "type": "HIP",
+                  "name": "AMD Radeon Graphics",
+                  "is_display": false
+                }
+              ],
+              "num_cpu_sockets": 1,
+              "num_cpu_cores": 10,
+              "num_cpu_threads": 20
+            },
+            "device_info": {
+              "device_type": "CPU",
+              "compute_devices": [
+                {
+                  "type": "CPU",
+                  "name": "AMD Ryzen AI 9 365 w/ Radeon 880M"
+                }
+              ],
+              "num_cpu_threads": 20
+            },
+            "stats": {
+              "device_peak_memory": 4766.35,
+              "number_of_samples": 49,
+              "time_for_samples": 32.501653,
+              "samples_per_minute": 90.45693768252342,
+              "total_render_time": 36.4683,
+              "render_time_no_sync": 32.5019,
+              "time_limit": 30
+            }
+          },
+          {
+            "timestamp": "2025-09-27T15:13:37.342415+00:00",
+            "blender_version": {
+              "version": "4.5.0",
+              "build_date": "2025-07-15",
+              "build_time": "01:36:28",
+              "build_commit_date": "2025-07-14",
+              "build_commit_time": "17:45",
+              "build_hash": "8cb6b388974a",
+              "label": "4.5.0",
+              "checksum": "1188b95cc12321c770b631939f7c25a096910b6f884a990bf9c0f62d52b38aec"
+            },
+            "benchmark_launcher": {
+              "label": "3.1.0",
+              "checksum": "d2504fddc513b6b1ccbf18cb75aa381d21a543fe4662d790f24aa7275fa255e9"
+            },
+            "benchmark_script": {
+              "label": "3.1.1",
+              "checksum": "5a706e14279da13b2bed2dbb9e0a47c2588b9ea4f37cf8f9c7d79c8b7c634c1f"
+            },
+            "scene": {
+              "label": "classroom",
+              "checksum": "936f0a528f03eba291c67ea87743a0ebde58938fb87471b262721b89b46b875d"
+            },
+            "system_info": {
+              "bitness": "64bit",
+              "machine": "x86_64",
+              "system": "Linux",
+              "dist_name": "openSUSE Tumbleweed",
+              "dist_version": "20250923",
+              "devices": [
+                {
+                  "type": "CPU",
+                  "name": "AMD Ryzen AI 9 365 w/ Radeon 880M"
+                },
+                {
+                  "type": "HIP",
+                  "name": "AMD Radeon Graphics",
+                  "is_display": false
+                }
+              ],
+              "num_cpu_sockets": 1,
+              "num_cpu_cores": 10,
+              "num_cpu_threads": 20
+            },
+            "device_info": {
+              "device_type": "CPU",
+              "compute_devices": [
+                {
+                  "type": "CPU",
+                  "name": "AMD Ryzen AI 9 365 w/ Radeon 880M"
+                }
+              ],
+              "num_cpu_threads": 20
+            },
+            "stats": {
+              "device_peak_memory": 648.57,
+              "number_of_samples": 34,
+              "time_for_samples": 30.853306,
+              "samples_per_minute": 66.11933256034216,
+              "total_render_time": 31.0796,
+              "render_time_no_sync": 30.8535,
+              "time_limit": 30
+            }
+          }
+        ],
+        "raw_output": "[\n  {\n    \"timestamp\": \"2025-09-27T15:12:21.627372+00:00\",\n    \"blender_version\": {\n      \"version\": \"4.5.0\",\n      \"build_date\": \"2025-07-15\",\n      \"build_time\": \"01:36:28\",\n      \"build_commit_date\": \"2025-07-14\",\n      \"build_commit_time\": \"17:45\",\n      \"build_hash\": \"8cb6b388974a\",\n      \"label\": \"4.5.0\",\n      \"checksum\": \"1188b95cc12321c770b631939f7c25a096910b6f884a990bf9c0f62d52b38aec\"\n    },\n    \"benchmark_launcher\": {\n      \"label\": \"3.1.0\",\n      \"checksum\": \"d2504fddc513b6b1ccbf18cb75aa381d21a543fe4662d790f24aa7275fa255e9\"\n    },\n    \"benchmark_script\": {\n      \"label\": \"3.1.1\",\n      \"checksum\": \"5a706e14279da13b2bed2dbb9e0a47c2588b9ea4f37cf8f9c7d79c8b7c634c1f\"\n    },\n    \"scene\": {\n      \"label\": \"monster\",\n      \"checksum\": \"8ff812a02f720433de1403dab447be9541eecca71cc919224a7790d017c1b2ce\"\n    },\n    \"system_info\": {\n      \"bitness\": \"64bit\",\n      \"machine\": \"x86_64\",\n      \"system\": \"Linux\",\n      \"dist_name\": \"openSUSE Tumbleweed\",\n      \"dist_version\": \"20250923\",\n      \"devices\": [\n        {\n          \"type\": \"CPU\",\n          \"name\": \"AMD Ryzen AI 9 365 w/ Radeon 880M\"\n        },\n        {\n          \"type\": \"HIP\",\n          \"name\": \"AMD Radeon Graphics\",\n          \"is_display\": false\n        }\n      ],\n      \"num_cpu_sockets\": 1,\n      \"num_cpu_cores\": 10,\n      \"num_cpu_threads\": 20\n    },\n    \"device_info\": {\n      \"device_type\": \"CPU\",\n      \"compute_devices\": [\n        {\n          \"type\": \"CPU\",\n          \"name\": \"AMD Ryzen AI 9 365 w/ Radeon 880M\"\n        }\n      ],\n      \"num_cpu_threads\": 20\n    },\n    \"stats\": {\n      \"device_peak_memory\": 634.34,\n      \"number_of_samples\": 70,\n      \"time_for_samples\": 30.318944,\n      \"samples_per_minute\": 138.52725213648603,\n      \"total_render_time\": 31.2563,\n      \"render_time_no_sync\": 30.3191,\n      \"time_limit\": 30\n    }\n  },\n  {\n    \"timestamp\": \"2025-09-27T15:13:04.091212+00:00\",\n    \"blender_version\": {\n      \"version\": \"4.5.0\",\n      \"build_date\": \"2025-07-15\",\n      \"build_time\": \"01:36:28\",\n      \"build_commit_date\": \"2025-07-14\",\n      \"build_commit_time\": \"17:45\",\n      \"build_hash\": \"8cb6b388974a\",\n      \"label\": \"4.5.0\",\n      \"checksum\": \"1188b95cc12321c770b631939f7c25a096910b6f884a990bf9c0f62d52b38aec\"\n    },\n    \"benchmark_launcher\": {\n      \"label\": \"3.1.0\",\n      \"checksum\": \"d2504fddc513b6b1ccbf18cb75aa381d21a543fe4662d790f24aa7275fa255e9\"\n    },\n    \"benchmark_script\": {\n      \"label\": \"3.1.1\",\n      \"checksum\": \"5a706e14279da13b2bed2dbb9e0a47c2588b9ea4f37cf8f9c7d79c8b7c634c1f\"\n    },\n    \"scene\": {\n      \"label\": \"junkshop\",\n      \"checksum\": \"f5515a21a1337b908212d8d76733530df83014464a24c585ab7b96000da0cdce\"\n    },\n    \"system_info\": {\n      \"bitness\": \"64bit\",\n      \"machine\": \"x86_64\",\n      \"system\": \"Linux\",\n      \"dist_name\": \"openSUSE Tumbleweed\",\n      \"dist_version\": \"20250923\",\n      \"devices\": [\n        {\n          \"type\": \"CPU\",\n          \"name\": \"AMD Ryzen AI 9 365 w/ Radeon 880M\"\n        },\n        {\n          \"type\": \"HIP\",\n          \"name\": \"AMD Radeon Graphics\",\n          \"is_display\": false\n        }\n      ],\n      \"num_cpu_sockets\": 1,\n      \"num_cpu_cores\": 10,\n      \"num_cpu_threads\": 20\n    },\n    \"device_info\": {\n      \"device_type\": \"CPU\",\n      \"compute_devices\": [\n        {\n          \"type\": \"CPU\",\n          \"name\": \"AMD Ryzen AI 9 365 w/ Radeon 880M\"\n        }\n      ],\n      \"num_cpu_threads\": 20\n    },\n    \"stats\": {\n      \"device_peak_memory\": 4766.35,\n      \"number_of_samples\": 49,\n      \"time_for_samples\": 32.501653,\n      \"samples_per_minute\": 90.45693768252342,\n      \"total_render_time\": 36.4683,\n      \"render_time_no_sync\": 32.5019,\n      \"time_limit\": 30\n    }\n  },\n  {\n    \"timestamp\": \"2025-09-27T15:13:37.342415+00:00\",\n    \"blender_version\": {\n      \"version\": \"4.5.0\",\n      \"build_date\": \"2025-07-15\",\n      \"build_time\": \"01:36:28\",\n      \"build_commit_date\": \"2025-07-14\",\n      \"build_commit_time\": \"17:45\",\n      \"build_hash\": \"8cb6b388974a\",\n      \"label\": \"4.5.0\",\n      \"checksum\": \"1188b95cc12321c770b631939f7c25a096910b6f884a990bf9c0f62d52b38aec\"\n    },\n    \"benchmark_launcher\": {\n      \"label\": \"3.1.0\",\n      \"checksum\": \"d2504fddc513b6b1ccbf18cb75aa381d21a543fe4662d790f24aa7275fa255e9\"\n    },\n    \"benchmark_script\": {\n      \"label\": \"3.1.1\",\n      \"checksum\": \"5a706e14279da13b2bed2dbb9e0a47c2588b9ea4f37cf8f9c7d79c8b7c634c1f\"\n    },\n    \"scene\": {\n      \"label\": \"classroom\",\n      \"checksum\": \"936f0a528f03eba291c67ea87743a0ebde58938fb87471b262721b89b46b875d\"\n    },\n    \"system_info\": {\n      \"bitness\": \"64bit\",\n      \"machine\": \"x86_64\",\n      \"system\": \"Linux\",\n      \"dist_name\": \"openSUSE Tumbleweed\",\n      \"dist_version\": \"20250923\",\n      \"devices\": [\n        {\n          \"type\": \"CPU\",\n          \"name\": \"AMD Ryzen AI 9 365 w/ Radeon 880M\"\n        },\n        {\n          \"type\": \"HIP\",\n          \"name\": \"AMD Radeon Graphics\",\n          \"is_display\": false\n        }\n      ],\n      \"num_cpu_sockets\": 1,\n      \"num_cpu_cores\": 10,\n      \"num_cpu_threads\": 20\n    },\n    \"device_info\": {\n      \"device_type\": \"CPU\",\n      \"compute_devices\": [\n        {\n          \"type\": \"CPU\",\n          \"name\": \"AMD Ryzen AI 9 365 w/ Radeon 880M\"\n        }\n      ],\n      \"num_cpu_threads\": 20\n    },\n    \"stats\": {\n      \"device_peak_memory\": 648.57,\n      \"number_of_samples\": 34,\n      \"time_for_samples\": 30.853306,\n      \"samples_per_minute\": 66.11933256034216,\n      \"total_render_time\": 31.0796,\n      \"render_time_no_sync\": 30.8535,\n      \"time_limit\": 30\n    }\n  }\n]\n",
+        "attempts_made": 1
+      },
+      {
+        "device_name": "AMD Radeon Graphics",
+        "device_framework": "HIP",
+        "scenes": [
+          "monster",
+          "junkshop",
+          "classroom"
+        ],
+        "success": true,
+        "elapsed_seconds": 119.1950935599998,
+        "scene_results": {
+          "monster": {
+            "samples_per_minute": 126.512288154768,
+            "scene_name": "monster"
+          },
+          "junkshop": {
+            "samples_per_minute": 70.22155485737125,
+            "scene_name": "junkshop"
+          },
+          "classroom": {
+            "samples_per_minute": 60.84527173390802,
+            "scene_name": "classroom"
+          }
+        },
+        "total_score": 257.57911474604725,
+        "raw_json": [
+          {
+            "timestamp": "2025-09-27T15:14:14.017365+00:00",
+            "blender_version": {
+              "version": "4.5.0",
+              "build_date": "2025-07-15",
+              "build_time": "01:36:28",
+              "build_commit_date": "2025-07-14",
+              "build_commit_time": "17:45",
+              "build_hash": "8cb6b388974a",
+              "label": "4.5.0",
+              "checksum": "1188b95cc12321c770b631939f7c25a096910b6f884a990bf9c0f62d52b38aec"
+            },
+            "benchmark_launcher": {
+              "label": "3.1.0",
+              "checksum": "d2504fddc513b6b1ccbf18cb75aa381d21a543fe4662d790f24aa7275fa255e9"
+            },
+            "benchmark_script": {
+              "label": "3.1.1",
+              "checksum": "5a706e14279da13b2bed2dbb9e0a47c2588b9ea4f37cf8f9c7d79c8b7c634c1f"
+            },
+            "scene": {
+              "label": "monster",
+              "checksum": "8ff812a02f720433de1403dab447be9541eecca71cc919224a7790d017c1b2ce"
+            },
+            "system_info": {
+              "bitness": "64bit",
+              "machine": "x86_64",
+              "system": "Linux",
+              "dist_name": "openSUSE Tumbleweed",
+              "dist_version": "20250923",
+              "devices": [
+                {
+                  "type": "CPU",
+                  "name": "AMD Ryzen AI 9 365 w/ Radeon 880M"
+                },
+                {
+                  "type": "HIP",
+                  "name": "AMD Radeon Graphics",
+                  "is_display": false
+                }
+              ],
+              "num_cpu_sockets": 1,
+              "num_cpu_cores": 10,
+              "num_cpu_threads": 20
+            },
+            "device_info": {
+              "device_type": "HIP",
+              "compute_devices": [
+                {
+                  "type": "HIP",
+                  "name": "AMD Radeon Graphics",
+                  "is_display": false
+                }
+              ],
+              "num_cpu_threads": 20
+            },
+            "stats": {
+              "device_peak_memory": 649.49,
+              "number_of_samples": 65,
+              "time_for_samples": 30.827045,
+              "samples_per_minute": 126.512288154768,
+              "total_render_time": 32.2087,
+              "render_time_no_sync": 30.8276,
+              "time_limit": 30
+            }
+          },
+          {
+            "timestamp": "2025-09-27T15:15:01.003939+00:00",
+            "blender_version": {
+              "version": "4.5.0",
+              "build_date": "2025-07-15",
+              "build_time": "01:36:28",
+              "build_commit_date": "2025-07-14",
+              "build_commit_time": "17:45",
+              "build_hash": "8cb6b388974a",
+              "label": "4.5.0",
+              "checksum": "1188b95cc12321c770b631939f7c25a096910b6f884a990bf9c0f62d52b38aec"
+            },
+            "benchmark_launcher": {
+              "label": "3.1.0",
+              "checksum": "d2504fddc513b6b1ccbf18cb75aa381d21a543fe4662d790f24aa7275fa255e9"
+            },
+            "benchmark_script": {
+              "label": "3.1.1",
+              "checksum": "5a706e14279da13b2bed2dbb9e0a47c2588b9ea4f37cf8f9c7d79c8b7c634c1f"
+            },
+            "scene": {
+              "label": "junkshop",
+              "checksum": "f5515a21a1337b908212d8d76733530df83014464a24c585ab7b96000da0cdce"
+            },
+            "system_info": {
+              "bitness": "64bit",
+              "machine": "x86_64",
+              "system": "Linux",
+              "dist_name": "openSUSE Tumbleweed",
+              "dist_version": "20250923",
+              "devices": [
+                {
+                  "type": "CPU",
+                  "name": "AMD Ryzen AI 9 365 w/ Radeon 880M"
+                },
+                {
+                  "type": "HIP",
+                  "name": "AMD Radeon Graphics",
+                  "is_display": false
+                }
+              ],
+              "num_cpu_sockets": 1,
+              "num_cpu_cores": 10,
+              "num_cpu_threads": 20
+            },
+            "device_info": {
+              "device_type": "HIP",
+              "compute_devices": [
+                {
+                  "type": "HIP",
+                  "name": "AMD Radeon Graphics",
+                  "is_display": false
+                }
+              ],
+              "num_cpu_threads": 20
+            },
+            "stats": {
+              "device_peak_memory": 4481.5,
+              "number_of_samples": 36,
+              "time_for_samples": 30.759786,
+              "samples_per_minute": 70.22155485737125,
+              "total_render_time": 37.0265,
+              "render_time_no_sync": 30.7602,
+              "time_limit": 30
+            }
+          },
+          {
+            "timestamp": "2025-09-27T15:15:36.998929+00:00",
+            "blender_version": {
+              "version": "4.5.0",
+              "build_date": "2025-07-15",
+              "build_time": "01:36:28",
+              "build_commit_date": "2025-07-14",
+              "build_commit_time": "17:45",
+              "build_hash": "8cb6b388974a",
+              "label": "4.5.0",
+              "checksum": "1188b95cc12321c770b631939f7c25a096910b6f884a990bf9c0f62d52b38aec"
+            },
+            "benchmark_launcher": {
+              "label": "3.1.0",
+              "checksum": "d2504fddc513b6b1ccbf18cb75aa381d21a543fe4662d790f24aa7275fa255e9"
+            },
+            "benchmark_script": {
+              "label": "3.1.1",
+              "checksum": "5a706e14279da13b2bed2dbb9e0a47c2588b9ea4f37cf8f9c7d79c8b7c634c1f"
+            },
+            "scene": {
+              "label": "classroom",
+              "checksum": "936f0a528f03eba291c67ea87743a0ebde58938fb87471b262721b89b46b875d"
+            },
+            "system_info": {
+              "bitness": "64bit",
+              "machine": "x86_64",
+              "system": "Linux",
+              "dist_name": "openSUSE Tumbleweed",
+              "dist_version": "20250923",
+              "devices": [
+                {
+                  "type": "CPU",
+                  "name": "AMD Ryzen AI 9 365 w/ Radeon 880M"
+                },
+                {
+                  "type": "HIP",
+                  "name": "AMD Radeon Graphics",
+                  "is_display": false
+                }
+              ],
+              "num_cpu_sockets": 1,
+              "num_cpu_cores": 10,
+              "num_cpu_threads": 20
+            },
+            "device_info": {
+              "device_type": "HIP",
+              "compute_devices": [
+                {
+                  "type": "HIP",
+                  "name": "AMD Radeon Graphics",
+                  "is_display": false
+                }
+              ],
+              "num_cpu_threads": 20
+            },
+            "stats": {
+              "device_peak_memory": 704.74,
+              "number_of_samples": 33,
+              "time_for_samples": 32.541559,
+              "samples_per_minute": 60.84527173390802,
+              "total_render_time": 33.0545,
+              "render_time_no_sync": 32.5419,
+              "time_limit": 30
+            }
+          }
+        ],
+        "raw_output": "[\n  {\n    \"timestamp\": \"2025-09-27T15:14:14.017365+00:00\",\n    \"blender_version\": {\n      \"version\": \"4.5.0\",\n      \"build_date\": \"2025-07-15\",\n      \"build_time\": \"01:36:28\",\n      \"build_commit_date\": \"2025-07-14\",\n      \"build_commit_time\": \"17:45\",\n      \"build_hash\": \"8cb6b388974a\",\n      \"label\": \"4.5.0\",\n      \"checksum\": \"1188b95cc12321c770b631939f7c25a096910b6f884a990bf9c0f62d52b38aec\"\n    },\n    \"benchmark_launcher\": {\n      \"label\": \"3.1.0\",\n      \"checksum\": \"d2504fddc513b6b1ccbf18cb75aa381d21a543fe4662d790f24aa7275fa255e9\"\n    },\n    \"benchmark_script\": {\n      \"label\": \"3.1.1\",\n      \"checksum\": \"5a706e14279da13b2bed2dbb9e0a47c2588b9ea4f37cf8f9c7d79c8b7c634c1f\"\n    },\n    \"scene\": {\n      \"label\": \"monster\",\n      \"checksum\": \"8ff812a02f720433de1403dab447be9541eecca71cc919224a7790d017c1b2ce\"\n    },\n    \"system_info\": {\n      \"bitness\": \"64bit\",\n      \"machine\": \"x86_64\",\n      \"system\": \"Linux\",\n      \"dist_name\": \"openSUSE Tumbleweed\",\n      \"dist_version\": \"20250923\",\n      \"devices\": [\n        {\n          \"type\": \"CPU\",\n          \"name\": \"AMD Ryzen AI 9 365 w/ Radeon 880M\"\n        },\n        {\n          \"type\": \"HIP\",\n          \"name\": \"AMD Radeon Graphics\",\n          \"is_display\": false\n        }\n      ],\n      \"num_cpu_sockets\": 1,\n      \"num_cpu_cores\": 10,\n      \"num_cpu_threads\": 20\n    },\n    \"device_info\": {\n      \"device_type\": \"HIP\",\n      \"compute_devices\": [\n        {\n          \"type\": \"HIP\",\n          \"name\": \"AMD Radeon Graphics\",\n          \"is_display\": false\n        }\n      ],\n      \"num_cpu_threads\": 20\n    },\n    \"stats\": {\n      \"device_peak_memory\": 649.49,\n      \"number_of_samples\": 65,\n      \"time_for_samples\": 30.827045,\n      \"samples_per_minute\": 126.512288154768,\n      \"total_render_time\": 32.2087,\n      \"render_time_no_sync\": 30.8276,\n      \"time_limit\": 30\n    }\n  },\n  {\n    \"timestamp\": \"2025-09-27T15:15:01.003939+00:00\",\n    \"blender_version\": {\n      \"version\": \"4.5.0\",\n      \"build_date\": \"2025-07-15\",\n      \"build_time\": \"01:36:28\",\n      \"build_commit_date\": \"2025-07-14\",\n      \"build_commit_time\": \"17:45\",\n      \"build_hash\": \"8cb6b388974a\",\n      \"label\": \"4.5.0\",\n      \"checksum\": \"1188b95cc12321c770b631939f7c25a096910b6f884a990bf9c0f62d52b38aec\"\n    },\n    \"benchmark_launcher\": {\n      \"label\": \"3.1.0\",\n      \"checksum\": \"d2504fddc513b6b1ccbf18cb75aa381d21a543fe4662d790f24aa7275fa255e9\"\n    },\n    \"benchmark_script\": {\n      \"label\": \"3.1.1\",\n      \"checksum\": \"5a706e14279da13b2bed2dbb9e0a47c2588b9ea4f37cf8f9c7d79c8b7c634c1f\"\n    },\n    \"scene\": {\n      \"label\": \"junkshop\",\n      \"checksum\": \"f5515a21a1337b908212d8d76733530df83014464a24c585ab7b96000da0cdce\"\n    },\n    \"system_info\": {\n      \"bitness\": \"64bit\",\n      \"machine\": \"x86_64\",\n      \"system\": \"Linux\",\n      \"dist_name\": \"openSUSE Tumbleweed\",\n      \"dist_version\": \"20250923\",\n      \"devices\": [\n        {\n          \"type\": \"CPU\",\n          \"name\": \"AMD Ryzen AI 9 365 w/ Radeon 880M\"\n        },\n        {\n          \"type\": \"HIP\",\n          \"name\": \"AMD Radeon Graphics\",\n          \"is_display\": false\n        }\n      ],\n      \"num_cpu_sockets\": 1,\n      \"num_cpu_cores\": 10,\n      \"num_cpu_threads\": 20\n    },\n    \"device_info\": {\n      \"device_type\": \"HIP\",\n      \"compute_devices\": [\n        {\n          \"type\": \"HIP\",\n          \"name\": \"AMD Radeon Graphics\",\n          \"is_display\": false\n        }\n      ],\n      \"num_cpu_threads\": 20\n    },\n    \"stats\": {\n      \"device_peak_memory\": 4481.5,\n      \"number_of_samples\": 36,\n      \"time_for_samples\": 30.759786,\n      \"samples_per_minute\": 70.22155485737125,\n      \"total_render_time\": 37.0265,\n      \"render_time_no_sync\": 30.7602,\n      \"time_limit\": 30\n    }\n  },\n  {\n    \"timestamp\": \"2025-09-27T15:15:36.998929+00:00\",\n    \"blender_version\": {\n      \"version\": \"4.5.0\",\n      \"build_date\": \"2025-07-15\",\n      \"build_time\": \"01:36:28\",\n      \"build_commit_date\": \"2025-07-14\",\n      \"build_commit_time\": \"17:45\",\n      \"build_hash\": \"8cb6b388974a\",\n      \"label\": \"4.5.0\",\n      \"checksum\": \"1188b95cc12321c770b631939f7c25a096910b6f884a990bf9c0f62d52b38aec\"\n    },\n    \"benchmark_launcher\": {\n      \"label\": \"3.1.0\",\n      \"checksum\": \"d2504fddc513b6b1ccbf18cb75aa381d21a543fe4662d790f24aa7275fa255e9\"\n    },\n    \"benchmark_script\": {\n      \"label\": \"3.1.1\",\n      \"checksum\": \"5a706e14279da13b2bed2dbb9e0a47c2588b9ea4f37cf8f9c7d79c8b7c634c1f\"\n    },\n    \"scene\": {\n      \"label\": \"classroom\",\n      \"checksum\": \"936f0a528f03eba291c67ea87743a0ebde58938fb87471b262721b89b46b875d\"\n    },\n    \"system_info\": {\n      \"bitness\": \"64bit\",\n      \"machine\": \"x86_64\",\n      \"system\": \"Linux\",\n      \"dist_name\": \"openSUSE Tumbleweed\",\n      \"dist_version\": \"20250923\",\n      \"devices\": [\n        {\n          \"type\": \"CPU\",\n          \"name\": \"AMD Ryzen AI 9 365 w/ Radeon 880M\"\n        },\n        {\n          \"type\": \"HIP\",\n          \"name\": \"AMD Radeon Graphics\",\n          \"is_display\": false\n        }\n      ],\n      \"num_cpu_sockets\": 1,\n      \"num_cpu_cores\": 10,\n      \"num_cpu_threads\": 20\n    },\n    \"device_info\": {\n      \"device_type\": \"HIP\",\n      \"compute_devices\": [\n        {\n          \"type\": \"HIP\",\n          \"name\": \"AMD Radeon Graphics\",\n          \"is_display\": false\n        }\n      ],\n      \"num_cpu_threads\": 20\n    },\n    \"stats\": {\n      \"device_peak_memory\": 704.74,\n      \"number_of_samples\": 33,\n      \"time_for_samples\": 32.541559,\n      \"samples_per_minute\": 60.84527173390802,\n      \"total_render_time\": 33.0545,\n      \"render_time_no_sync\": 32.5419,\n      \"time_limit\": 30\n    }\n  }\n]\n",
+        "attempts_made": 1,
+        "cpu_speedup": 0.8728432404643844
+      }
+    ],
+    "scenes_tested": [
+      "monster",
+      "junkshop",
+      "classroom"
+    ],
+    "successful_runs": 2,
+    "total_devices_tested": 2
+  }
+}

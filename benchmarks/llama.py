@@ -493,12 +493,55 @@ class LlamaBenchmark(BaseBenchmark):
     def _parse_vulkaninfo_text(self, text: str) -> List[Dict[str, Any]]:
         """
         Parse text output of `vulkaninfo`:
-        Finds blocks starting with 'GPU<N>:' and extracts deviceName (and driverName if present).
+        Looks for lines like 'GPU id = 0 (Device Name)' and extracts ID and name.
+        This matches the format that vulkaninfo actually outputs.
+        """
+        devices: List[Dict[str, Any]] = []
+        lines = text.splitlines()
+        seen_devices = set()  # Track (id, name) pairs to avoid duplicates
+
+        for line in lines:
+            # Look for lines like "GPU id = 0 (NVIDIA GeForce RTX 3090)"
+            match = re.search(r'GPU id\s*=\s*([0-9]+)', line)
+            if match:
+                gpu_id = int(match.group(1))
+                
+                # Extract device name from parentheses - find outermost parentheses
+                p1 = line.find("(")
+                p2 = line.rfind(")")
+                
+                name = f"Vulkan Device {gpu_id}"  # fallback name
+                if p2 > p1 >= 0:
+                    extracted_name = line[p1+1:p2].strip()
+                    if extracted_name:
+                        name = extracted_name
+
+                # Avoid duplicates
+                device_key = (gpu_id, name)
+                if device_key not in seen_devices:
+                    devices.append({
+                        "index": gpu_id,
+                        "name": name,
+                        "driver": self._detect_gpu_driver_from_name(name),
+                        "icd_path": None,
+                    })
+                    seen_devices.add(device_key)
+
+        # Fallback: try old parsing method for backwards compatibility
+        if not devices:
+            devices = self._parse_vulkaninfo_text_legacy(text)
+
+        return devices
+
+    def _parse_vulkaninfo_text_legacy(self, text: str) -> List[Dict[str, Any]]:
+        """
+        Legacy parsing method for vulkaninfo text output.
+        Finds blocks starting with 'GPU<N>:' and extracts deviceName.
         """
         devices: List[Dict[str, Any]] = []
         lines = text.splitlines()
 
-        # najdi začátky bloků GPU
+        # Find GPU block starts
         positions: List[tuple[int,int]] = []
         for i, line in enumerate(lines):
             m = re.match(r"\s*GPU\s*([0-9]+)\s*:", line)
@@ -537,10 +580,26 @@ class LlamaBenchmark(BaseBenchmark):
                 "index": gpu_index,
                 "name": name,
                 "driver": driver or "unknown",
-                "icd_path": None,  # nikdy nevynucujeme ICD
+                "icd_path": None,
             })
 
         return devices
+
+    def _detect_gpu_driver_from_name(self, gpu_name: str) -> str:
+        """Detect GPU driver/manufacturer from device name"""
+        if not gpu_name:
+            return "unknown"
+        
+        gpu_name_lower = gpu_name.lower()
+        
+        if any(keyword in gpu_name_lower for keyword in ['nvidia', 'geforce', 'gtx', 'rtx', 'quadro', 'tesla']):
+            return "nvidia"
+        elif any(keyword in gpu_name_lower for keyword in ['amd', 'radeon', 'rx ', 'vega', 'fury']):
+            return "amd"
+        elif any(keyword in gpu_name_lower for keyword in ['intel', 'iris', 'uhd']):
+            return "intel"
+        
+        return "vulkan"
 
     def _vulkaninfo_json(self, extra_env: Optional[Dict[str, str]] = None) -> Optional[Dict[str, Any]]:
         """Run `vulkaninfo --json` and parse; tolerates headless warnings on stdout."""

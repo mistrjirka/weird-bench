@@ -1,0 +1,254 @@
+{
+  "benchmark_name": "llama",
+  "timestamp": 1758991078.3638535,
+  "results": {
+    "runs_cpu": [
+      {
+        "type": "cpu",
+        "prompt_size": 512,
+        "generation_size": 64,
+        "ngl": 0,
+        "returncode": 0,
+        "elapsed_seconds": 84.53948402699996,
+        "metrics": {
+          "system_info": {
+            "cpu_info": "11th Gen Intel(R) Core(TM) i7-1165G7 @ 2.80GHz",
+            "gpu_info": "",
+            "backends": "CPU",
+            "model_type": "qwen3 4B IQ4_NL - 4.5 bpw",
+            "model_size": 2375386624,
+            "model_n_params": 4022468096,
+            "n_threads": 4,
+            "n_gpu_layers": 99
+          },
+          "prompt_processing": {
+            "avg_time_ns": 10231288634,
+            "avg_tokens_per_sec": 50.044358,
+            "stddev_time_ns": 68157920,
+            "stddev_tokens_per_sec": 0.335064,
+            "avg_time_ms": 10231.288634,
+            "samples_ns": [
+              10123125367,
+              10208387337,
+              10254875179,
+              10281413904,
+              10288641385
+            ],
+            "samples_ts": [
+              50.5773,
+              50.1548,
+              49.9275,
+              49.7986,
+              49.7636
+            ]
+          },
+          "generation": {
+            "avg_time_ns": 4556925201,
+            "avg_tokens_per_sec": 14.044591,
+            "stddev_time_ns": 7781602,
+            "stddev_tokens_per_sec": 0.024007,
+            "avg_time_ms": 4556.925201,
+            "samples_ns": [
+              4544793465,
+              4557433792,
+              4564208115,
+              4555077316,
+              4563113320
+            ],
+            "samples_ts": [
+              14.082,
+              14.043,
+              14.0221,
+              14.0503,
+              14.0255
+            ]
+          },
+          "tokens_per_second": 14.044591,
+          "total_time_ms": 14788.213835
+        },
+        "essential_info": {
+          "build_commit": "234e2ff",
+          "model_type": "qwen3 4B IQ4_NL - 4.5 bpw",
+          "backends": "CPU",
+          "test_time": "2025-09-27T16:29:27Z"
+        }
+      }
+    ],
+    "runs_gpu": [
+      {
+        "type": "gpu",
+        "prompt_size": 512,
+        "generation_size": 512,
+        "ngl": 99,
+        "returncode": 0,
+        "elapsed_seconds": 426.55028303999995,
+        "metrics": {
+          "system_info": {
+            "cpu_info": "11th Gen Intel(R) Core(TM) i7-1165G7 @ 2.80GHz",
+            "gpu_info": "Intel",
+            "backends": "Vulkan",
+            "model_type": "qwen3 4B IQ4_NL - 4.5 bpw",
+            "model_size": 2375386624,
+            "model_n_params": 4022468096,
+            "n_threads": 4,
+            "n_gpu_layers": 99
+          },
+          "prompt_processing": {
+            "avg_time_ns": 7279110876,
+            "avg_tokens_per_sec": 70.338597,
+            "stddev_time_ns": 17789571,
+            "stddev_tokens_per_sec": 0.171894,
+            "avg_time_ms": 7279.110876,
+            "samples_ns": [
+              7301751225,
+              7288616355,
+              7282635171,
+              7263951812,
+              7258599818
+            ],
+            "samples_ts": [
+              70.1202,
+              70.2465,
+              70.3042,
+              70.485,
+              70.537
+            ]
+          },
+          "generation": {
+            "avg_time_ns": 75967164410,
+            "avg_tokens_per_sec": 6.739757,
+            "stddev_time_ns": 57826370,
+            "stddev_tokens_per_sec": 0.005126,
+            "avg_time_ms": 75967.16441,
+            "samples_ns": [
+              76064899163,
+              75942515293,
+              75944357114,
+              75968776982,
+              75915273501
+            ],
+            "samples_ts": [
+              6.73109,
+              6.74194,
+              6.74178,
+              6.73961,
+              6.74436
+            ]
+          },
+          "tokens_per_second": 6.739757,
+          "total_time_ms": 83246.275286
+        },
+        "essential_info": {
+          "build_commit": "234e2ff",
+          "model_type": "qwen3 4B IQ4_NL - 4.5 bpw",
+          "backends": "Vulkan",
+          "test_time": "2025-09-27T16:30:53Z"
+        },
+        "gpu_device": {
+          "index": 0,
+          "name": "Intel",
+          "driver": "R",
+          "icd_path": null
+        }
+      }
+    ],
+    "device_runs": [
+      {
+        "device_name": "Intel",
+        "device_index": 0,
+        "device_driver": "R",
+        "device_type": "gpu",
+        "runs": [
+          {
+            "prompt_size": 512,
+            "generation_size": 512,
+            "ngl": 99,
+            "returncode": 0,
+            "elapsed_seconds": 426.55028303999995,
+            "success": true,
+            "metrics": {
+              "system_info": {
+                "cpu_info": "11th Gen Intel(R) Core(TM) i7-1165G7 @ 2.80GHz",
+                "gpu_info": "Intel",
+                "backends": "Vulkan",
+                "model_type": "qwen3 4B IQ4_NL - 4.5 bpw",
+                "model_size": 2375386624,
+                "model_n_params": 4022468096,
+                "n_threads": 4,
+                "n_gpu_layers": 99
+              },
+              "prompt_processing": {
+                "avg_time_ns": 7279110876,
+                "avg_tokens_per_sec": 70.338597,
+                "stddev_time_ns": 17789571,
+                "stddev_tokens_per_sec": 0.171894,
+                "avg_time_ms": 7279.110876,
+                "samples_ns": [
+                  7301751225,
+                  7288616355,
+                  7282635171,
+                  7263951812,
+                  7258599818
+                ],
+                "samples_ts": [
+                  70.1202,
+                  70.2465,
+                  70.3042,
+                  70.485,
+                  70.537
+                ]
+              },
+              "generation": {
+                "avg_time_ns": 75967164410,
+                "avg_tokens_per_sec": 6.739757,
+                "stddev_time_ns": 57826370,
+                "stddev_tokens_per_sec": 0.005126,
+                "avg_time_ms": 75967.16441,
+                "samples_ns": [
+                  76064899163,
+                  75942515293,
+                  75944357114,
+                  75968776982,
+                  75915273501
+                ],
+                "samples_ts": [
+                  6.73109,
+                  6.74194,
+                  6.74178,
+                  6.73961,
+                  6.74436
+                ]
+              },
+              "tokens_per_second": 6.739757,
+              "total_time_ms": 83246.275286
+            },
+            "essential_info": {
+              "build_commit": "234e2ff",
+              "model_type": "qwen3 4B IQ4_NL - 4.5 bpw",
+              "backends": "Vulkan",
+              "test_time": "2025-09-27T16:30:53Z"
+            }
+          }
+        ],
+        "success": true
+      }
+    ],
+    "gpu_selection": {
+      "device_index": null,
+      "vk_driver_files": null,
+      "available_gpus": [
+        {
+          "index": 0,
+          "name": "Intel",
+          "driver": "R",
+          "icd_path": null
+        }
+      ]
+    },
+    "cpu_build_timing": {
+      "config_time_seconds": 0.9996729380000033,
+      "build_time_seconds": 128.331115662,
+      "total_time_seconds": 129.3307886
+    }
+  }
+}

@@ -1,0 +1,756 @@
+{
+  "meta": {
+    "suite_start_time": 1758990120.6499887,
+    "benchmarks_run": [
+      "reversan",
+      "llama",
+      "7zip",
+      "blender"
+    ],
+    "suite_end_time": 1758991391.6729152,
+    "total_duration_seconds": 1271.022926568985
+  },
+  "benchmarks": {
+    "reversan": {
+      "meta": {
+        "benchmark_name": "reversan",
+        "host": "pheonix",
+        "platform": "Linux-6.16.8-arch3-1-x86_64-with-glibc2.42",
+        "timestamp": 1758990120.6505816,
+        "gnu_time": "/usr/bin/time",
+        "repo": "https://github.com/Saniel0/Reversan-Engine.git",
+        "test_runs_per_config": 1
+      },
+      "build": {
+        "binary": "/home/jirka/programy/weird-bench/Reversan-Engine/reversan_avx2",
+        "compile_time_seconds": 3.9137283129999787,
+        "config_time_seconds": 0.5814231009999844,
+        "build_time_seconds": 3.3323052119999943,
+        "time_measurer": "GNU time -v",
+        "threads_supported": true,
+        "help_snippet": "Usage: reversan [MODE] [OPTIONS]\n\nModes:\n--help, -h                                Display this help message.\n--play                                    Play against the engine in terminal interface.\n--bot-vs-bot                              Start game where the engine plays against itself.\n--benchmark                               Run search on pre-defined state.\n\nAdditional Options:\n--depth, -d <1 - 49> [10]                           Set the engine's search depth.\n--engine, -e <negascout | alphabeta> [negascout]    Choose the tree search algorithm.\n--threads, -t, <1 - 8> [1]                          EXPERIMENTAL, negascout only.\n--disable-tp                                        Disables transposition tables.\n--order, -o <line_by_line | opt1 | opt2> [opt1]     Sets search order of the engine.\n--style, -s <basic | solarized | dracula> [basic]   Specify UI style.\n"
+      },
+      "runs_depth": [
+        {
+          "depth": 1,
+          "returncode": 0,
+          "metrics": {
+            "max_rss_kb": 3632,
+            "user_seconds": 0.0,
+            "sys_seconds": 0.0,
+            "elapsed_seconds": 0.0
+          },
+          "stderr_tail": "ge unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 3632\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 151\n\tVoluntary context switches: 1\n\tInvoluntary context switches: 0\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 0\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n"
+        },
+        {
+          "depth": 2,
+          "returncode": 0,
+          "metrics": {
+            "max_rss_kb": 3628,
+            "user_seconds": 0.0,
+            "sys_seconds": 0.0,
+            "elapsed_seconds": 0.0
+          },
+          "stderr_tail": "ge unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 3628\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 153\n\tVoluntary context switches: 1\n\tInvoluntary context switches: 0\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 0\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n"
+        },
+        {
+          "depth": 3,
+          "returncode": 0,
+          "metrics": {
+            "max_rss_kb": 3596,
+            "user_seconds": 0.0,
+            "sys_seconds": 0.0,
+            "elapsed_seconds": 0.0
+          },
+          "stderr_tail": "ge unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 3596\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 152\n\tVoluntary context switches: 1\n\tInvoluntary context switches: 0\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 0\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n"
+        },
+        {
+          "depth": 4,
+          "returncode": 0,
+          "metrics": {
+            "max_rss_kb": 3624,
+            "user_seconds": 0.0,
+            "sys_seconds": 0.0,
+            "elapsed_seconds": 0.0
+          },
+          "stderr_tail": "ge unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 3624\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 152\n\tVoluntary context switches: 1\n\tInvoluntary context switches: 0\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 0\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n"
+        },
+        {
+          "depth": 5,
+          "returncode": 0,
+          "metrics": {
+            "max_rss_kb": 3632,
+            "user_seconds": 0.0,
+            "sys_seconds": 0.0,
+            "elapsed_seconds": 0.0
+          },
+          "stderr_tail": "ge unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 3632\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 153\n\tVoluntary context switches: 1\n\tInvoluntary context switches: 1\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 0\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n"
+        },
+        {
+          "depth": 6,
+          "returncode": 0,
+          "metrics": {
+            "max_rss_kb": 3592,
+            "user_seconds": 0.02,
+            "sys_seconds": 0.0,
+            "elapsed_seconds": 0.0
+          },
+          "stderr_tail": "ge unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 3592\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 156\n\tVoluntary context switches: 1\n\tInvoluntary context switches: 1\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 0\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n"
+        },
+        {
+          "depth": 7,
+          "returncode": 0,
+          "metrics": {
+            "max_rss_kb": 3760,
+            "user_seconds": 0.06,
+            "sys_seconds": 0.0,
+            "elapsed_seconds": 0.0
+          },
+          "stderr_tail": "ge unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 3760\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 172\n\tVoluntary context switches: 1\n\tInvoluntary context switches: 2\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 0\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n"
+        },
+        {
+          "depth": 8,
+          "returncode": 0,
+          "metrics": {
+            "max_rss_kb": 4004,
+            "user_seconds": 0.09,
+            "sys_seconds": 0.0,
+            "elapsed_seconds": 0.0
+          },
+          "stderr_tail": "e unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 4004\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 236\n\tVoluntary context switches: 1\n\tInvoluntary context switches: 24\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 0\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n"
+        },
+        {
+          "depth": 9,
+          "returncode": 0,
+          "metrics": {
+            "max_rss_kb": 5004,
+            "user_seconds": 0.68,
+            "sys_seconds": 0.0,
+            "elapsed_seconds": 0.0
+          },
+          "stderr_tail": "e unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 5004\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 559\n\tVoluntary context switches: 1\n\tInvoluntary context switches: 33\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 0\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n"
+        },
+        {
+          "depth": 10,
+          "returncode": 0,
+          "metrics": {
+            "max_rss_kb": 5696,
+            "user_seconds": 1.24,
+            "sys_seconds": 0.0,
+            "elapsed_seconds": 1.0
+          },
+          "stderr_tail": "e unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 5696\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 877\n\tVoluntary context switches: 1\n\tInvoluntary context switches: 46\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 0\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n"
+        },
+        {
+          "depth": 11,
+          "returncode": 0,
+          "metrics": {
+            "max_rss_kb": 13948,
+            "user_seconds": 5.45,
+            "sys_seconds": 0.0,
+            "elapsed_seconds": 5.0
+          },
+          "stderr_tail": "nshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 13948\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 2901\n\tVoluntary context switches: 1\n\tInvoluntary context switches: 168\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 0\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n"
+        },
+        {
+          "depth": 12,
+          "returncode": 0,
+          "metrics": {
+            "max_rss_kb": 90956,
+            "user_seconds": 43.8,
+            "sys_seconds": 0.02,
+            "elapsed_seconds": 43.0
+          },
+          "stderr_tail": "hared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 90956\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 18433\n\tVoluntary context switches: 1\n\tInvoluntary context switches: 1047\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 0\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n"
+        }
+      ],
+      "runs_threads": [
+        {
+          "threads": 8,
+          "returncode": 0,
+          "metrics": {
+            "max_rss_kb": 32508,
+            "user_seconds": 13.08,
+            "sys_seconds": 0.28,
+            "elapsed_seconds": 4.0
+          },
+          "stderr_tail": "red data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 32508\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 7525\n\tVoluntary context switches: 68683\n\tInvoluntary context switches: 318\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 0\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n"
+        },
+        {
+          "threads": 4,
+          "returncode": 0,
+          "metrics": {
+            "max_rss_kb": 26612,
+            "user_seconds": 10.06,
+            "sys_seconds": 0.14,
+            "elapsed_seconds": 4.0
+          },
+          "stderr_tail": "red data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 26612\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 6006\n\tVoluntary context switches: 31393\n\tInvoluntary context switches: 202\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 0\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n"
+        },
+        {
+          "threads": 2,
+          "returncode": 0,
+          "metrics": {
+            "max_rss_kb": 21760,
+            "user_seconds": 7.28,
+            "sys_seconds": 0.04,
+            "elapsed_seconds": 4.0
+          },
+          "stderr_tail": "ared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 21760\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 4783\n\tVoluntary context switches: 7864\n\tInvoluntary context switches: 217\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 0\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n"
+        },
+        {
+          "threads": 1,
+          "returncode": 0,
+          "metrics": {
+            "max_rss_kb": 13880,
+            "user_seconds": 5.49,
+            "sys_seconds": 0.0,
+            "elapsed_seconds": 5.0
+          },
+          "stderr_tail": "nshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 13880\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 2901\n\tVoluntary context switches: 1\n\tInvoluntary context switches: 207\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 0\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n"
+        }
+      ]
+    },
+    "llama": {
+      "runs_cpu": [
+        {
+          "type": "cpu",
+          "prompt_size": 512,
+          "generation_size": 64,
+          "ngl": 0,
+          "returncode": 0,
+          "elapsed_seconds": 84.53948402699996,
+          "metrics": {
+            "system_info": {
+              "cpu_info": "11th Gen Intel(R) Core(TM) i7-1165G7 @ 2.80GHz",
+              "gpu_info": "",
+              "backends": "CPU",
+              "model_type": "qwen3 4B IQ4_NL - 4.5 bpw",
+              "model_size": 2375386624,
+              "model_n_params": 4022468096,
+              "n_threads": 4,
+              "n_gpu_layers": 99
+            },
+            "prompt_processing": {
+              "avg_time_ns": 10231288634,
+              "avg_tokens_per_sec": 50.044358,
+              "stddev_time_ns": 68157920,
+              "stddev_tokens_per_sec": 0.335064,
+              "avg_time_ms": 10231.288634,
+              "samples_ns": [
+                10123125367,
+                10208387337,
+                10254875179,
+                10281413904,
+                10288641385
+              ],
+              "samples_ts": [
+                50.5773,
+                50.1548,
+                49.9275,
+                49.7986,
+                49.7636
+              ]
+            },
+            "generation": {
+              "avg_time_ns": 4556925201,
+              "avg_tokens_per_sec": 14.044591,
+              "stddev_time_ns": 7781602,
+              "stddev_tokens_per_sec": 0.024007,
+              "avg_time_ms": 4556.925201,
+              "samples_ns": [
+                4544793465,
+                4557433792,
+                4564208115,
+                4555077316,
+                4563113320
+              ],
+              "samples_ts": [
+                14.082,
+                14.043,
+                14.0221,
+                14.0503,
+                14.0255
+              ]
+            },
+            "tokens_per_second": 14.044591,
+            "total_time_ms": 14788.213835
+          },
+          "essential_info": {
+            "build_commit": "234e2ff",
+            "model_type": "qwen3 4B IQ4_NL - 4.5 bpw",
+            "backends": "CPU",
+            "test_time": "2025-09-27T16:29:27Z"
+          }
+        }
+      ],
+      "runs_gpu": [
+        {
+          "type": "gpu",
+          "prompt_size": 512,
+          "generation_size": 512,
+          "ngl": 99,
+          "returncode": 0,
+          "elapsed_seconds": 426.55028303999995,
+          "metrics": {
+            "system_info": {
+              "cpu_info": "11th Gen Intel(R) Core(TM) i7-1165G7 @ 2.80GHz",
+              "gpu_info": "Intel",
+              "backends": "Vulkan",
+              "model_type": "qwen3 4B IQ4_NL - 4.5 bpw",
+              "model_size": 2375386624,
+              "model_n_params": 4022468096,
+              "n_threads": 4,
+              "n_gpu_layers": 99
+            },
+            "prompt_processing": {
+              "avg_time_ns": 7279110876,
+              "avg_tokens_per_sec": 70.338597,
+              "stddev_time_ns": 17789571,
+              "stddev_tokens_per_sec": 0.171894,
+              "avg_time_ms": 7279.110876,
+              "samples_ns": [
+                7301751225,
+                7288616355,
+                7282635171,
+                7263951812,
+                7258599818
+              ],
+              "samples_ts": [
+                70.1202,
+                70.2465,
+                70.3042,
+                70.485,
+                70.537
+              ]
+            },
+            "generation": {
+              "avg_time_ns": 75967164410,
+              "avg_tokens_per_sec": 6.739757,
+              "stddev_time_ns": 57826370,
+              "stddev_tokens_per_sec": 0.005126,
+              "avg_time_ms": 75967.16441,
+              "samples_ns": [
+                76064899163,
+                75942515293,
+                75944357114,
+                75968776982,
+                75915273501
+              ],
+              "samples_ts": [
+                6.73109,
+                6.74194,
+                6.74178,
+                6.73961,
+                6.74436
+              ]
+            },
+            "tokens_per_second": 6.739757,
+            "total_time_ms": 83246.275286
+          },
+          "essential_info": {
+            "build_commit": "234e2ff",
+            "model_type": "qwen3 4B IQ4_NL - 4.5 bpw",
+            "backends": "Vulkan",
+            "test_time": "2025-09-27T16:30:53Z"
+          },
+          "gpu_device": {
+            "index": 0,
+            "name": "Intel",
+            "driver": "R",
+            "icd_path": null
+          }
+        }
+      ],
+      "device_runs": [
+        {
+          "device_name": "Intel",
+          "device_index": 0,
+          "device_driver": "R",
+          "device_type": "gpu",
+          "runs": [
+            {
+              "prompt_size": 512,
+              "generation_size": 512,
+              "ngl": 99,
+              "returncode": 0,
+              "elapsed_seconds": 426.55028303999995,
+              "success": true,
+              "metrics": {
+                "system_info": {
+                  "cpu_info": "11th Gen Intel(R) Core(TM) i7-1165G7 @ 2.80GHz",
+                  "gpu_info": "Intel",
+                  "backends": "Vulkan",
+                  "model_type": "qwen3 4B IQ4_NL - 4.5 bpw",
+                  "model_size": 2375386624,
+                  "model_n_params": 4022468096,
+                  "n_threads": 4,
+                  "n_gpu_layers": 99
+                },
+                "prompt_processing": {
+                  "avg_time_ns": 7279110876,
+                  "avg_tokens_per_sec": 70.338597,
+                  "stddev_time_ns": 17789571,
+                  "stddev_tokens_per_sec": 0.171894,
+                  "avg_time_ms": 7279.110876,
+                  "samples_ns": [
+                    7301751225,
+                    7288616355,
+                    7282635171,
+                    7263951812,
+                    7258599818
+                  ],
+                  "samples_ts": [
+                    70.1202,
+                    70.2465,
+                    70.3042,
+                    70.485,
+                    70.537
+                  ]
+                },
+                "generation": {
+                  "avg_time_ns": 75967164410,
+                  "avg_tokens_per_sec": 6.739757,
+                  "stddev_time_ns": 57826370,
+                  "stddev_tokens_per_sec": 0.005126,
+                  "avg_time_ms": 75967.16441,
+                  "samples_ns": [
+                    76064899163,
+                    75942515293,
+                    75944357114,
+                    75968776982,
+                    75915273501
+                  ],
+                  "samples_ts": [
+                    6.73109,
+                    6.74194,
+                    6.74178,
+                    6.73961,
+                    6.74436
+                  ]
+                },
+                "tokens_per_second": 6.739757,
+                "total_time_ms": 83246.275286
+              },
+              "essential_info": {
+                "build_commit": "234e2ff",
+                "model_type": "qwen3 4B IQ4_NL - 4.5 bpw",
+                "backends": "Vulkan",
+                "test_time": "2025-09-27T16:30:53Z"
+              }
+            }
+          ],
+          "success": true
+        }
+      ],
+      "gpu_selection": {
+        "device_index": null,
+        "vk_driver_files": null,
+        "available_gpus": [
+          {
+            "index": 0,
+            "name": "Intel",
+            "driver": "R",
+            "icd_path": null
+          }
+        ]
+      },
+      "cpu_build_timing": {
+        "config_time_seconds": 0.9996729380000033,
+        "build_time_seconds": 128.331115662,
+        "total_time_seconds": 129.3307886
+      }
+    },
+    "7zip": {
+      "meta": {
+        "benchmark_name": "7zip",
+        "host": "pheonix",
+        "platform": "Linux-6.16.8-arch3-1-x86_64-with-glibc2.42",
+        "timestamp": 1758991078.3641636
+      },
+      "build": {
+        "sevenzip_command": "7z",
+        "build_time_seconds": 0.0,
+        "notes": "7-Zip benchmark uses system-installed binary"
+      },
+      "runs": [
+        {
+          "success": true,
+          "threads": 8,
+          "elapsed_seconds": 7.406247560000111,
+          "archive_size_bytes": 105050406,
+          "compression_ratio": 0.0,
+          "compression_speed_mb_s": 0.0,
+          "raw_output": "\n7-Zip 25.01 (x64) : Copyright (c) 1999-2025 Igor Pavlov : 2025-08-03\n 64-bit locale=cs_CZ.UTF-8 Threads:8 OPEN_MAX:1024, ASM\n\nScanning the drive:\n2 folders, 3 files, 169865500 bytes (162 MiB)\n\nCreating archive: /tmp/benchmark_archive_8t.7z\n\nAdd new data to archive: 2 folders, 3 files, 169865500 bytes (162 MiB)\n\n\nFiles read from disk: 3\nArchive size: 105050406 bytes (101 MiB)\nEverything is Ok\n",
+          "speedup": 3.9615211356774274,
+          "thread_efficiency_percent": 49.51901419596784
+        },
+        {
+          "success": true,
+          "threads": 4,
+          "elapsed_seconds": 7.486259344000018,
+          "archive_size_bytes": 105050406,
+          "compression_ratio": 0.0,
+          "compression_speed_mb_s": 0.0,
+          "raw_output": "\n7-Zip 25.01 (x64) : Copyright (c) 1999-2025 Igor Pavlov : 2025-08-03\n 64-bit locale=cs_CZ.UTF-8 Threads:8 OPEN_MAX:1024, ASM\n\nScanning the drive:\n2 folders, 3 files, 169865500 bytes (162 MiB)\n\nCreating archive: /tmp/benchmark_archive_4t.7z\n\nAdd new data to archive: 2 folders, 3 files, 169865500 bytes (162 MiB)\n\n\nFiles read from disk: 3\nArchive size: 105050406 bytes (101 MiB)\nEverything is Ok\n",
+          "speedup": 3.9191811152675107,
+          "thread_efficiency_percent": 97.97952788168777
+        },
+        {
+          "success": true,
+          "threads": 2,
+          "elapsed_seconds": 7.560343768999928,
+          "archive_size_bytes": 105010557,
+          "compression_ratio": 0.0,
+          "compression_speed_mb_s": 0.0,
+          "raw_output": "\n7-Zip 25.01 (x64) : Copyright (c) 1999-2025 Igor Pavlov : 2025-08-03\n 64-bit locale=cs_CZ.UTF-8 Threads:8 OPEN_MAX:1024, ASM\n\nScanning the drive:\n2 folders, 3 files, 169865500 bytes (162 MiB)\n\nCreating archive: /tmp/benchmark_archive_2t.7z\n\nAdd new data to archive: 2 folders, 3 files, 169865500 bytes (162 MiB)\n\n\nFiles read from disk: 3\nArchive size: 105010557 bytes (101 MiB)\nEverything is Ok\n",
+          "speedup": 3.8807767399816093,
+          "thread_efficiency_percent": 194.03883699908047
+        },
+        {
+          "success": true,
+          "threads": 1,
+          "elapsed_seconds": 29.340006244999813,
+          "archive_size_bytes": 105010557,
+          "compression_ratio": 0.0,
+          "compression_speed_mb_s": 0.0,
+          "raw_output": "\n7-Zip 25.01 (x64) : Copyright (c) 1999-2025 Igor Pavlov : 2025-08-03\n 64-bit locale=cs_CZ.UTF-8 Threads:8 OPEN_MAX:1024, ASM\n\nScanning the drive:\n2 folders, 3 files, 169865500 bytes (162 MiB)\n\nCreating archive: /tmp/benchmark_archive_1t.7z\n\nAdd new data to archive: 2 folders, 3 files, 169865500 bytes (162 MiB)\n\n\nFiles read from disk: 3\nArchive size: 105010557 bytes (101 MiB)\nEverything is Ok\n"
+        }
+      ],
+      "test_data_size_mb": 100
+    },
+    "blender": {
+      "meta": {
+        "benchmark_name": "blender",
+        "host": "pheonix",
+        "platform": "Linux-6.16.8-arch3-1-x86_64-with-glibc2.42",
+        "timestamp": 1758991164.338386,
+        "benchmark_url": "https://download.blender.org/release/BlenderBenchmark2.0/launcher/benchmark-launcher-cli-3.1.0-linux.tar.gz"
+      },
+      "build": {
+        "launcher_path": "/home/jirka/programy/weird-bench/blender-benchmark/benchmark-launcher-cli",
+        "build_time_seconds": 0.0,
+        "notes": "Blender benchmark uses pre-built binaries"
+      },
+      "device_runs": [
+        {
+          "device_name": "11th Gen Intel Core i7-1165G7 @ 2.80GHz",
+          "device_framework": "CPU",
+          "scenes": [
+            "monster",
+            "junkshop",
+            "classroom"
+          ],
+          "success": true,
+          "elapsed_seconds": 126.97730285800003,
+          "scene_results": {
+            "monster": {
+              "samples_per_minute": 39.073637004088795,
+              "scene_name": "monster"
+            },
+            "junkshop": {
+              "samples_per_minute": 26.94289117429469,
+              "scene_name": "junkshop"
+            },
+            "classroom": {
+              "samples_per_minute": 18.57421364209125,
+              "scene_name": "classroom"
+            }
+          },
+          "total_score": 84.59074182047473,
+          "raw_json": [
+            {
+              "timestamp": "2025-09-27T16:41:42.150265+00:00",
+              "blender_version": {
+                "version": "4.5.0",
+                "build_date": "2025-07-15",
+                "build_time": "01:36:28",
+                "build_commit_date": "2025-07-14",
+                "build_commit_time": "17:45",
+                "build_hash": "8cb6b388974a",
+                "label": "4.5.0",
+                "checksum": "1188b95cc12321c770b631939f7c25a096910b6f884a990bf9c0f62d52b38aec"
+              },
+              "benchmark_launcher": {
+                "label": "3.1.0",
+                "checksum": "d2504fddc513b6b1ccbf18cb75aa381d21a543fe4662d790f24aa7275fa255e9"
+              },
+              "benchmark_script": {
+                "label": "3.1.1",
+                "checksum": "5a706e14279da13b2bed2dbb9e0a47c2588b9ea4f37cf8f9c7d79c8b7c634c1f"
+              },
+              "scene": {
+                "label": "monster",
+                "checksum": "8ff812a02f720433de1403dab447be9541eecca71cc919224a7790d017c1b2ce"
+              },
+              "system_info": {
+                "bitness": "64bit",
+                "machine": "x86_64",
+                "system": "Linux",
+                "dist_name": "Arch Linux",
+                "dist_version": "rolling",
+                "devices": [
+                  {
+                    "type": "CPU",
+                    "name": "11th Gen Intel Core i7-1165G7 @ 2.80GHz"
+                  }
+                ],
+                "num_cpu_sockets": 1,
+                "num_cpu_cores": 4,
+                "num_cpu_threads": 8
+              },
+              "device_info": {
+                "device_type": "CPU",
+                "compute_devices": [
+                  {
+                    "type": "CPU",
+                    "name": "11th Gen Intel Core i7-1165G7 @ 2.80GHz"
+                  }
+                ],
+                "num_cpu_threads": 8
+              },
+              "stats": {
+                "device_peak_memory": 634.34,
+                "number_of_samples": 20,
+                "time_for_samples": 30.711244,
+                "samples_per_minute": 39.073637004088795,
+                "total_render_time": 32.2599,
+                "render_time_no_sync": 30.7116,
+                "time_limit": 30
+              }
+            },
+            {
+              "timestamp": "2025-09-27T16:42:34.180796+00:00",
+              "blender_version": {
+                "version": "4.5.0",
+                "build_date": "2025-07-15",
+                "build_time": "01:36:28",
+                "build_commit_date": "2025-07-14",
+                "build_commit_time": "17:45",
+                "build_hash": "8cb6b388974a",
+                "label": "4.5.0",
+                "checksum": "1188b95cc12321c770b631939f7c25a096910b6f884a990bf9c0f62d52b38aec"
+              },
+              "benchmark_launcher": {
+                "label": "3.1.0",
+                "checksum": "d2504fddc513b6b1ccbf18cb75aa381d21a543fe4662d790f24aa7275fa255e9"
+              },
+              "benchmark_script": {
+                "label": "3.1.1",
+                "checksum": "5a706e14279da13b2bed2dbb9e0a47c2588b9ea4f37cf8f9c7d79c8b7c634c1f"
+              },
+              "scene": {
+                "label": "junkshop",
+                "checksum": "f5515a21a1337b908212d8d76733530df83014464a24c585ab7b96000da0cdce"
+              },
+              "system_info": {
+                "bitness": "64bit",
+                "machine": "x86_64",
+                "system": "Linux",
+                "dist_name": "Arch Linux",
+                "dist_version": "rolling",
+                "devices": [
+                  {
+                    "type": "CPU",
+                    "name": "11th Gen Intel Core i7-1165G7 @ 2.80GHz"
+                  }
+                ],
+                "num_cpu_sockets": 1,
+                "num_cpu_cores": 4,
+                "num_cpu_threads": 8
+              },
+              "device_info": {
+                "device_type": "CPU",
+                "compute_devices": [
+                  {
+                    "type": "CPU",
+                    "name": "11th Gen Intel Core i7-1165G7 @ 2.80GHz"
+                  }
+                ],
+                "num_cpu_threads": 8
+              },
+              "stats": {
+                "device_peak_memory": 4770.35,
+                "number_of_samples": 14,
+                "time_for_samples": 31.177055,
+                "samples_per_minute": 26.94289117429469,
+                "total_render_time": 39.0285,
+                "render_time_no_sync": 31.1771,
+                "time_limit": 30
+              }
+            },
+            {
+              "timestamp": "2025-09-27T16:43:11.602246+00:00",
+              "blender_version": {
+                "version": "4.5.0",
+                "build_date": "2025-07-15",
+                "build_time": "01:36:28",
+                "build_commit_date": "2025-07-14",
+                "build_commit_time": "17:45",
+                "build_hash": "8cb6b388974a",
+                "label": "4.5.0",
+                "checksum": "1188b95cc12321c770b631939f7c25a096910b6f884a990bf9c0f62d52b38aec"
+              },
+              "benchmark_launcher": {
+                "label": "3.1.0",
+                "checksum": "d2504fddc513b6b1ccbf18cb75aa381d21a543fe4662d790f24aa7275fa255e9"
+              },
+              "benchmark_script": {
+                "label": "3.1.1",
+                "checksum": "5a706e14279da13b2bed2dbb9e0a47c2588b9ea4f37cf8f9c7d79c8b7c634c1f"
+              },
+              "scene": {
+                "label": "classroom",
+                "checksum": "936f0a528f03eba291c67ea87743a0ebde58938fb87471b262721b89b46b875d"
+              },
+              "system_info": {
+                "bitness": "64bit",
+                "machine": "x86_64",
+                "system": "Linux",
+                "dist_name": "Arch Linux",
+                "dist_version": "rolling",
+                "devices": [
+                  {
+                    "type": "CPU",
+                    "name": "11th Gen Intel Core i7-1165G7 @ 2.80GHz"
+                  }
+                ],
+                "num_cpu_sockets": 1,
+                "num_cpu_cores": 4,
+                "num_cpu_threads": 8
+              },
+              "device_info": {
+                "device_type": "CPU",
+                "compute_devices": [
+                  {
+                    "type": "CPU",
+                    "name": "11th Gen Intel Core i7-1165G7 @ 2.80GHz"
+                  }
+                ],
+                "num_cpu_threads": 8
+              },
+              "stats": {
+                "device_peak_memory": 648.57,
+                "number_of_samples": 10,
+                "time_for_samples": 32.302848,
+                "samples_per_minute": 18.57421364209125,
+                "total_render_time": 32.677,
+                "render_time_no_sync": 32.303,
+                "time_limit": 30
+              }
+            }
+          ],
+          "raw_output": "[\n  {\n    \"timestamp\": \"2025-09-27T16:41:42.150265+00:00\",\n    \"blender_version\": {\n      \"version\": \"4.5.0\",\n      \"build_date\": \"2025-07-15\",\n      \"build_time\": \"01:36:28\",\n      \"build_commit_date\": \"2025-07-14\",\n      \"build_commit_time\": \"17:45\",\n      \"build_hash\": \"8cb6b388974a\",\n      \"label\": \"4.5.0\",\n      \"checksum\": \"1188b95cc12321c770b631939f7c25a096910b6f884a990bf9c0f62d52b38aec\"\n    },\n    \"benchmark_launcher\": {\n      \"label\": \"3.1.0\",\n      \"checksum\": \"d2504fddc513b6b1ccbf18cb75aa381d21a543fe4662d790f24aa7275fa255e9\"\n    },\n    \"benchmark_script\": {\n      \"label\": \"3.1.1\",\n      \"checksum\": \"5a706e14279da13b2bed2dbb9e0a47c2588b9ea4f37cf8f9c7d79c8b7c634c1f\"\n    },\n    \"scene\": {\n      \"label\": \"monster\",\n      \"checksum\": \"8ff812a02f720433de1403dab447be9541eecca71cc919224a7790d017c1b2ce\"\n    },\n    \"system_info\": {\n      \"bitness\": \"64bit\",\n      \"machine\": \"x86_64\",\n      \"system\": \"Linux\",\n      \"dist_name\": \"Arch Linux\",\n      \"dist_version\": \"rolling\",\n      \"devices\": [\n        {\n          \"type\": \"CPU\",\n          \"name\": \"11th Gen Intel Core i7-1165G7 @ 2.80GHz\"\n        }\n      ],\n      \"num_cpu_sockets\": 1,\n      \"num_cpu_cores\": 4,\n      \"num_cpu_threads\": 8\n    },\n    \"device_info\": {\n      \"device_type\": \"CPU\",\n      \"compute_devices\": [\n        {\n          \"type\": \"CPU\",\n          \"name\": \"11th Gen Intel Core i7-1165G7 @ 2.80GHz\"\n        }\n      ],\n      \"num_cpu_threads\": 8\n    },\n    \"stats\": {\n      \"device_peak_memory\": 634.34,\n      \"number_of_samples\": 20,\n      \"time_for_samples\": 30.711244,\n      \"samples_per_minute\": 39.073637004088795,\n      \"total_render_time\": 32.2599,\n      \"render_time_no_sync\": 30.7116,\n      \"time_limit\": 30\n    }\n  },\n  {\n    \"timestamp\": \"2025-09-27T16:42:34.180796+00:00\",\n    \"blender_version\": {\n      \"version\": \"4.5.0\",\n      \"build_date\": \"2025-07-15\",\n      \"build_time\": \"01:36:28\",\n      \"build_commit_date\": \"2025-07-14\",\n      \"build_commit_time\": \"17:45\",\n      \"build_hash\": \"8cb6b388974a\",\n      \"label\": \"4.5.0\",\n      \"checksum\": \"1188b95cc12321c770b631939f7c25a096910b6f884a990bf9c0f62d52b38aec\"\n    },\n    \"benchmark_launcher\": {\n      \"label\": \"3.1.0\",\n      \"checksum\": \"d2504fddc513b6b1ccbf18cb75aa381d21a543fe4662d790f24aa7275fa255e9\"\n    },\n    \"benchmark_script\": {\n      \"label\": \"3.1.1\",\n      \"checksum\": \"5a706e14279da13b2bed2dbb9e0a47c2588b9ea4f37cf8f9c7d79c8b7c634c1f\"\n    },\n    \"scene\": {\n      \"label\": \"junkshop\",\n      \"checksum\": \"f5515a21a1337b908212d8d76733530df83014464a24c585ab7b96000da0cdce\"\n    },\n    \"system_info\": {\n      \"bitness\": \"64bit\",\n      \"machine\": \"x86_64\",\n      \"system\": \"Linux\",\n      \"dist_name\": \"Arch Linux\",\n      \"dist_version\": \"rolling\",\n      \"devices\": [\n        {\n          \"type\": \"CPU\",\n          \"name\": \"11th Gen Intel Core i7-1165G7 @ 2.80GHz\"\n        }\n      ],\n      \"num_cpu_sockets\": 1,\n      \"num_cpu_cores\": 4,\n      \"num_cpu_threads\": 8\n    },\n    \"device_info\": {\n      \"device_type\": \"CPU\",\n      \"compute_devices\": [\n        {\n          \"type\": \"CPU\",\n          \"name\": \"11th Gen Intel Core i7-1165G7 @ 2.80GHz\"\n        }\n      ],\n      \"num_cpu_threads\": 8\n    },\n    \"stats\": {\n      \"device_peak_memory\": 4770.35,\n      \"number_of_samples\": 14,\n      \"time_for_samples\": 31.177055,\n      \"samples_per_minute\": 26.94289117429469,\n      \"total_render_time\": 39.0285,\n      \"render_time_no_sync\": 31.1771,\n      \"time_limit\": 30\n    }\n  },\n  {\n    \"timestamp\": \"2025-09-27T16:43:11.602246+00:00\",\n    \"blender_version\": {\n      \"version\": \"4.5.0\",\n      \"build_date\": \"2025-07-15\",\n      \"build_time\": \"01:36:28\",\n      \"build_commit_date\": \"2025-07-14\",\n      \"build_commit_time\": \"17:45\",\n      \"build_hash\": \"8cb6b388974a\",\n      \"label\": \"4.5.0\",\n      \"checksum\": \"1188b95cc12321c770b631939f7c25a096910b6f884a990bf9c0f62d52b38aec\"\n    },\n    \"benchmark_launcher\": {\n      \"label\": \"3.1.0\",\n      \"checksum\": \"d2504fddc513b6b1ccbf18cb75aa381d21a543fe4662d790f24aa7275fa255e9\"\n    },\n    \"benchmark_script\": {\n      \"label\": \"3.1.1\",\n      \"checksum\": \"5a706e14279da13b2bed2dbb9e0a47c2588b9ea4f37cf8f9c7d79c8b7c634c1f\"\n    },\n    \"scene\": {\n      \"label\": \"classroom\",\n      \"checksum\": \"936f0a528f03eba291c67ea87743a0ebde58938fb87471b262721b89b46b875d\"\n    },\n    \"system_info\": {\n      \"bitness\": \"64bit\",\n      \"machine\": \"x86_64\",\n      \"system\": \"Linux\",\n      \"dist_name\": \"Arch Linux\",\n      \"dist_version\": \"rolling\",\n      \"devices\": [\n        {\n          \"type\": \"CPU\",\n          \"name\": \"11th Gen Intel Core i7-1165G7 @ 2.80GHz\"\n        }\n      ],\n      \"num_cpu_sockets\": 1,\n      \"num_cpu_cores\": 4,\n      \"num_cpu_threads\": 8\n    },\n    \"device_info\": {\n      \"device_type\": \"CPU\",\n      \"compute_devices\": [\n        {\n          \"type\": \"CPU\",\n          \"name\": \"11th Gen Intel Core i7-1165G7 @ 2.80GHz\"\n        }\n      ],\n      \"num_cpu_threads\": 8\n    },\n    \"stats\": {\n      \"device_peak_memory\": 648.57,\n      \"number_of_samples\": 10,\n      \"time_for_samples\": 32.302848,\n      \"samples_per_minute\": 18.57421364209125,\n      \"total_render_time\": 32.677,\n      \"render_time_no_sync\": 32.303,\n      \"time_limit\": 30\n    }\n  }\n]\n",
+          "attempts_made": 1
+        }
+      ],
+      "scenes_tested": [
+        "monster",
+        "junkshop",
+        "classroom"
+      ],
+      "successful_runs": 1,
+      "total_devices_tested": 1
+    }
+  }
+}
