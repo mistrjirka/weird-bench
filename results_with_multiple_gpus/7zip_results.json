@@ -1,0 +1,84 @@
+{
+  "benchmark_name": "7zip",
+  "timestamp": 1758932167.361206,
+  "results": {
+    "meta": {
+      "benchmark_name": "7zip",
+      "host": "grammetry",
+      "platform": "Linux-6.16.8-arch1-1-x86_64-with-glibc2.42",
+      "timestamp": 1758932036.0838847
+    },
+    "build": {
+      "sevenzip_command": "7z",
+      "build_time_seconds": 0.0,
+      "notes": "7-Zip benchmark uses system-installed binary"
+    },
+    "runs": [
+      {
+        "success": true,
+        "threads": 28,
+        "elapsed_seconds": 9.066324537001492,
+        "archive_size_bytes": 105050409,
+        "compression_ratio": 0.0,
+        "compression_speed_mb_s": 0.0,
+        "raw_output": "\n7-Zip 25.01 (x64) : Copyright (c) 1999-2025 Igor Pavlov : 2025-08-03\n 64-bit locale=cs_CZ.UTF-8 Threads:28 OPEN_MAX:1024, ASM\n\nScanning the drive:\n2 folders, 3 files, 169865500 bytes (162 MiB)\n\nCreating archive: /tmp/benchmark_archive_28t.7z\n\nAdd new data to archive: 2 folders, 3 files, 169865500 bytes (162 MiB)\n\n\nFiles read from disk: 3\nArchive size: 105050409 bytes (101 MiB)\nEverything is Ok\n",
+        "speedup": 3.2183312984127617,
+        "thread_efficiency_percent": 11.494040351474148
+      },
+      {
+        "success": true,
+        "threads": 14,
+        "elapsed_seconds": 9.192565983998065,
+        "archive_size_bytes": 105050409,
+        "compression_ratio": 0.0,
+        "compression_speed_mb_s": 0.0,
+        "raw_output": "\n7-Zip 25.01 (x64) : Copyright (c) 1999-2025 Igor Pavlov : 2025-08-03\n 64-bit locale=cs_CZ.UTF-8 Threads:28 OPEN_MAX:1024, ASM\n\nScanning the drive:\n2 folders, 3 files, 169865500 bytes (162 MiB)\n\nCreating archive: /tmp/benchmark_archive_14t.7z\n\nAdd new data to archive: 2 folders, 3 files, 169865500 bytes (162 MiB)\n\n\nFiles read from disk: 3\nArchive size: 105050409 bytes (101 MiB)\nEverything is Ok\n",
+        "speedup": 3.174133976279504,
+        "thread_efficiency_percent": 22.6723855448536
+      },
+      {
+        "success": true,
+        "threads": 8,
+        "elapsed_seconds": 9.167587665004248,
+        "archive_size_bytes": 105050409,
+        "compression_ratio": 0.0,
+        "compression_speed_mb_s": 0.0,
+        "raw_output": "\n7-Zip 25.01 (x64) : Copyright (c) 1999-2025 Igor Pavlov : 2025-08-03\n 64-bit locale=cs_CZ.UTF-8 Threads:28 OPEN_MAX:1024, ASM\n\nScanning the drive:\n2 folders, 3 files, 169865500 bytes (162 MiB)\n\nCreating archive: /tmp/benchmark_archive_8t.7z\n\nAdd new data to archive: 2 folders, 3 files, 169865500 bytes (162 MiB)\n\n\nFiles read from disk: 3\nArchive size: 105050409 bytes (101 MiB)\nEverything is Ok\n",
+        "speedup": 3.1827823289198913,
+        "thread_efficiency_percent": 39.78477911149864
+      },
+      {
+        "success": true,
+        "threads": 4,
+        "elapsed_seconds": 9.144550882003387,
+        "archive_size_bytes": 105050409,
+        "compression_ratio": 0.0,
+        "compression_speed_mb_s": 0.0,
+        "raw_output": "\n7-Zip 25.01 (x64) : Copyright (c) 1999-2025 Igor Pavlov : 2025-08-03\n 64-bit locale=cs_CZ.UTF-8 Threads:28 OPEN_MAX:1024, ASM\n\nScanning the drive:\n2 folders, 3 files, 169865500 bytes (162 MiB)\n\nCreating archive: /tmp/benchmark_archive_4t.7z\n\nAdd new data to archive: 2 folders, 3 files, 169865500 bytes (162 MiB)\n\n\nFiles read from disk: 3\nArchive size: 105050409 bytes (101 MiB)\nEverything is Ok\n",
+        "speedup": 3.1908003351398144,
+        "thread_efficiency_percent": 79.77000837849536
+      },
+      {
+        "success": true,
+        "threads": 2,
+        "elapsed_seconds": 9.619577250006841,
+        "archive_size_bytes": 105010560,
+        "compression_ratio": 0.0,
+        "compression_speed_mb_s": 0.0,
+        "raw_output": "\n7-Zip 25.01 (x64) : Copyright (c) 1999-2025 Igor Pavlov : 2025-08-03\n 64-bit locale=cs_CZ.UTF-8 Threads:28 OPEN_MAX:1024, ASM\n\nScanning the drive:\n2 folders, 3 files, 169865500 bytes (162 MiB)\n\nCreating archive: /tmp/benchmark_archive_2t.7z\n\nAdd new data to archive: 2 folders, 3 files, 169865500 bytes (162 MiB)\n\n\nFiles read from disk: 3\nArchive size: 105010560 bytes (101 MiB)\nEverything is Ok\n",
+        "speedup": 3.033234752491721,
+        "thread_efficiency_percent": 151.66173762458607
+      },
+      {
+        "success": true,
+        "threads": 1,
+        "elapsed_seconds": 29.17843601899949,
+        "archive_size_bytes": 105010560,
+        "compression_ratio": 0.0,
+        "compression_speed_mb_s": 0.0,
+        "raw_output": "\n7-Zip 25.01 (x64) : Copyright (c) 1999-2025 Igor Pavlov : 2025-08-03\n 64-bit locale=cs_CZ.UTF-8 Threads:28 OPEN_MAX:1024, ASM\n\nScanning the drive:\n2 folders, 3 files, 169865500 bytes (162 MiB)\n\nCreating archive: /tmp/benchmark_archive_1t.7z\n\nAdd new data to archive: 2 folders, 3 files, 169865500 bytes (162 MiB)\n\n\nFiles read from disk: 3\nArchive size: 105010560 bytes (101 MiB)\nEverything is Ok\n"
+      }
+    ],
+    "test_data_size_mb": 100
+  }
+}
