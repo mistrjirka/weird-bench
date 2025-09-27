@@ -226,13 +226,15 @@ class LlamaBenchmark(BaseBenchmark):
                     "This usually means Vulkan drivers are not properly installed."
                 )
             
-            # Test our parsing logic
-            gpu_id_lines = [line for line in output.splitlines() if 'GPU id =' in line]
-            if not gpu_id_lines:
+            # Test our parsing logic and show the actual GPUs found
+            devices = self._parse_vulkaninfo_text(output)
+            if not devices:
                 print("⚠️  vulkaninfo works but no 'GPU id = X (Name)' lines found.")
                 print("    This might indicate no GPUs or unusual vulkaninfo output format.")
             else:
-                print(f"✅ vulkaninfo found {len(set(gpu_id_lines))} GPU entries")
+                print(f"✅ Found {len(devices)} Vulkan GPU(s):")
+                for gpu in devices:
+                    print(f"   • Device {gpu['index']}: {gpu['name']} (Driver: {gpu.get('driver','unknown')})")
                 
         except subprocess.TimeoutExpired:
             raise RuntimeError(
