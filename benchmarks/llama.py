@@ -196,14 +196,9 @@ class LlamaBenchmark(BaseBenchmark):
         self._check_dependencies()
         print("✅ All required dependencies found!")
 
-        print("🎮 Detecting available GPUs...")
-        self.available_gpus = self._detect_available_gpus()
-        if self.available_gpus:
-            print(f"✅ Found {len(self.available_gpus)} Vulkan GPU(s):")
-            for gpu in self.available_gpus:
-                print(f"   • Device {gpu['index']}: {gpu['name']} (Driver: {gpu.get('driver','unknown')})")
-        else:
-            print("⚠️  No Vulkan GPUs detected")
+        print("🎮 Detecting available GPUs (deferred until after build)...")
+        # GPU detection will be done after build when binaries are available
+        self.available_gpus = []  # Initialize empty, will populate after build
 
         os.makedirs(self.shared_models_dir, exist_ok=True)
 
@@ -224,6 +219,16 @@ class LlamaBenchmark(BaseBenchmark):
             os.makedirs(self.project_models_dir, exist_ok=True)
             if not os.path.exists(self.project_model_path) and os.path.exists(self.shared_model_path):
                 shutil.copy2(self.shared_model_path, self.project_model_path)
+            
+            # For skip_build mode, detect GPUs using existing binaries
+            print("🎮 Detecting available GPUs using existing binaries...")
+            self.available_gpus = self._detect_available_gpus()
+            if self.available_gpus:
+                print(f"✅ Found {len(self.available_gpus)} Vulkan GPU(s):")
+                for gpu in self.available_gpus:
+                    print(f"   • Device {gpu['index']}: {gpu['name']} (Driver: {gpu.get('driver','unknown')})")
+            else:
+                print("⚠️  No Vulkan GPUs detected using existing binaries")
 
     def _download_model_to_shared_location(self) -> None:
         def progress_hook(block_num, block_size, total_size):
@@ -281,6 +286,16 @@ class LlamaBenchmark(BaseBenchmark):
                 vulkan_devices = self._check_vulkan_devices(vulkan_binary)
                 build_results["vulkan_devices"] = vulkan_devices
                 build_results["vulkan_supported"] = bool(vulkan_devices and len(vulkan_devices) > 0)
+                
+                # Detect GPUs using existing binary in skip-build mode
+                print("🎮 Detecting available GPUs using existing binary...")
+                self.available_gpus = self._detect_available_gpus()
+                if self.available_gpus:
+                    print(f"✅ Found {len(self.available_gpus)} Vulkan GPU(s):")
+                    for gpu in self.available_gpus:
+                        print(f"   • Device {gpu['index']}: {gpu['name']} (Driver: {gpu.get('driver','unknown')})")
+                else:
+                    print("⚠️  No Vulkan GPUs detected using existing binary")
             else:
                 print("ℹ️  Vulkan bench binary not found or --no-gpu set; skipping Vulkan probing.")
                 build_results["vulkan_supported"] = False
@@ -321,6 +336,16 @@ class LlamaBenchmark(BaseBenchmark):
             vulkan_devices = self._check_vulkan_devices(vulkan_binary)
             build_results["vulkan_devices"] = vulkan_devices
             build_results["vulkan_supported"] = bool(vulkan_devices and len(vulkan_devices) > 0)
+            
+            # Now that we have a working Vulkan binary, properly detect GPUs
+            print("🎮 Detecting available GPUs using llama-bench binary...")
+            self.available_gpus = self._detect_available_gpus()
+            if self.available_gpus:
+                print(f"✅ Found {len(self.available_gpus)} Vulkan GPU(s):")
+                for gpu in self.available_gpus:
+                    print(f"   • Device {gpu['index']}: {gpu['name']} (Driver: {gpu.get('driver','unknown')})")
+            else:
+                print("⚠️  No Vulkan GPUs detected using llama-bench binary")
         except Exception as e:
             print(f"❌ Vulkan build failed: {e}")
             build_results["vulkan_build_error"] = str(e)
@@ -541,7 +566,101 @@ class LlamaBenchmark(BaseBenchmark):
 
     def _detect_available_gpus(self) -> List[Dict[str, Any]]:
         """
-        Prefer robust text parsing (works headless). Fall back to JSON if usable.
+        Use llama-bench binary to detect available Vulkan GPUs.
+        This is the modern approach that verifies GPU mapping against actual GGML_VULKAN_DEVICE indices.
+        """
+        # Try to use the built binary first (prefer Vulkan build if available)
+        bench_binary = self._find_bench_binary("vulkan", must_exist=False)
+        if not bench_binary:
+            bench_binary = self._find_bench_binary("cpu", must_exist=False)
+        
+        if not bench_binary:
+            print("⚠️  No llama-bench binary found for GPU detection")
+            return []
+
+        try:
+            # Run the binary without arguments to see device enumeration
+            result = self.run_command([bench_binary], check=False)
+            output = (result.stdout or "") + (result.stderr or "")
+            
+            devices = []
+            device_indices_found = set()  # Track found device indices to avoid duplicates
+            lines = output.split('\n')
+            
+            # Parse llama-bench output for Vulkan device information
+            for line in lines:
+                line = line.strip()
+                
+                # Look for device enumeration lines like:
+                # "ggml_vulkan: 0 = NVIDIA GeForce RTX 3090 (NVIDIA) | uma: 0 | fp16: 1 | bf16: 1..."
+                if "ggml_vulkan:" in line and " = " in line:
+                    # Parse format: "ggml_vulkan: 0 = NVIDIA GeForce RTX 3090 (NVIDIA) | ..."
+                    match = re.search(r'ggml_vulkan:\s*(\d+)\s*=\s*([^|]+)', line)
+                    if match:
+                        device_index = int(match.group(1))
+                        if device_index not in device_indices_found:
+                            device_info = match.group(2).strip()
+                            
+                            # Extract device name and driver from format "Device Name (Driver)"
+                            name_match = re.match(r'(.+?)\s*\(([^)]+)\)', device_info)
+                            if name_match:
+                                device_name = name_match.group(1).strip()
+                                device_driver = name_match.group(2).strip()
+                            else:
+                                device_name = device_info
+                                device_driver = "vulkan"
+                            
+                            devices.append({
+                                "index": device_index,
+                                "name": device_name,
+                                "driver": device_driver,
+                                "icd_path": None,
+                            })
+                            device_indices_found.add(device_index)
+                
+                # Look for older format device enumeration lines like:
+                # "ggml_vulkan: Device 0: NVIDIA GeForce RTX 3060 Ti"
+                elif "ggml_vulkan:" in line and "Device" in line and ":" in line:
+                    # Try to extract device index and name
+                    match = re.search(r'Device\s+(\d+):\s*(.+)', line)
+                    if match:
+                        device_index = int(match.group(1))
+                        if device_index not in device_indices_found:
+                            device_name = match.group(2).strip()
+                            devices.append({
+                                "index": device_index,
+                                "name": device_name,
+                                "driver": "vulkan",
+                                "icd_path": None,
+                            })
+                            device_indices_found.add(device_index)
+            
+            # If no specific devices were found but we have a device count, create generic entries
+            if not devices:
+                for line in lines:
+                    if "ggml_vulkan:" in line and "Found" in line and "Vulkan devices:" in line:
+                        match = re.search(r'Found\s+(\d+)\s+Vulkan devices:', line)
+                        if match:
+                            device_count = int(match.group(1))
+                            for i in range(device_count):
+                                devices.append({
+                                    "index": i,
+                                    "name": f"Vulkan Device {i}",
+                                    "driver": "vulkan",
+                                    "icd_path": None,
+                                })
+                            break
+            
+            return devices
+            
+        except Exception as e:
+            print(f"⚠️  Failed to detect GPUs using llama-bench: {e}")
+            # Fallback to vulkaninfo method as last resort
+            return self._detect_available_gpus_fallback()
+
+    def _detect_available_gpus_fallback(self) -> List[Dict[str, Any]]:
+        """
+        Fallback GPU detection using vulkaninfo (older method).
         Index corresponds directly to GGML_VULKAN_DEVICE.
         """
         # 1) textový výstup (headless-friendly)
@@ -927,10 +1046,13 @@ class LlamaBenchmark(BaseBenchmark):
         return None
 
     def _check_vulkan_devices(self, bench_binary: str) -> Optional[List[str]]:
+        """
+        Legacy method for compatibility. 
+        Returns simple device count information for vulkan_devices field.
+        """
         try:
             res = self.run_command([bench_binary], check=False)
             output = (res.stdout or "") + (res.stderr or "")
-            devices = []
             lines = output.split('\n')
             for line in lines:
                 if "ggml_vulkan: Found" in line and "Vulkan devices:" in line:
@@ -939,8 +1061,6 @@ class LlamaBenchmark(BaseBenchmark):
                         num = int(m.group(1))
                         if num > 0:
                             return [f"vulkan_device_{i}" for i in range(num)]
-                elif line.strip().startswith("ggml_vulkan:") and "=" in line:
-                    devices.append(line.strip())
-            return devices if devices else None
+            return None
         except Exception:
             return None
