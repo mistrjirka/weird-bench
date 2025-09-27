@@ -567,7 +567,7 @@ class LlamaBenchmark(BaseBenchmark):
     def _detect_available_gpus(self) -> List[Dict[str, Any]]:
         """
         Use llama-bench binary to detect available Vulkan GPUs.
-        This is the modern approach that verifies GPU mapping against actual GGML_VULKAN_DEVICE indices.
+        This is the modern approach that verifies GPU mapping against actual GGML_VK_VISIBLE_DEVICES indices.
         """
         # Try to use the built binary first (prefer Vulkan build if available)
         bench_binary = self._find_bench_binary("vulkan", must_exist=False)
@@ -661,7 +661,7 @@ class LlamaBenchmark(BaseBenchmark):
     def _detect_available_gpus_fallback(self) -> List[Dict[str, Any]]:
         """
         Fallback GPU detection using vulkaninfo (older method).
-        Index corresponds directly to GGML_VULKAN_DEVICE.
+        Index corresponds directly to GGML_VK_VISIBLE_DEVICES.
         """
         # 1) textový výstup (headless-friendly)
         text = self._vulkaninfo_text()
@@ -707,7 +707,7 @@ class LlamaBenchmark(BaseBenchmark):
     def set_gpu_selection(self, gpu_device_index: Optional[int] = None, vk_driver_files: Optional[str] = None) -> None:
         """
         Configure which Vulkan device to use.
-        Prefer setting only GGML_VULKAN_DEVICE. Avoid forcing VK_DRIVER_FILES unless truly necessary.
+        Uses GGML_VK_VISIBLE_DEVICES to select specific GPU. Avoid forcing VK_DRIVER_FILES unless truly necessary.
         """
         self.gpu_device_index = gpu_device_index
         self.vk_driver_files = vk_driver_files
@@ -730,7 +730,7 @@ class LlamaBenchmark(BaseBenchmark):
     def _get_gpu_env_vars(self) -> Dict[str, str]:
         env: Dict[str, str] = {}
         if self.gpu_device_index is not None:
-            env['GGML_VULKAN_DEVICE'] = str(self.gpu_device_index)
+            env['GGML_VK_VISIBLE_DEVICES'] = str(self.gpu_device_index)
         return env
 
 
@@ -773,7 +773,7 @@ class LlamaBenchmark(BaseBenchmark):
                 for p_size in prompt_sizes:
                     for g_size in generation_sizes:
                         print(f"Running CPU benchmark: prompt={p_size}, generation={g_size}")
-                        cmd = [cpu_binary, "-m", self.project_model_path, "-p", str(p_size), "-n", str(g_size)]
+                        cmd = [cpu_binary, "-m", self.project_model_path, "-p", str(p_size), "-n", str(g_size), "-sm", "none", "-mg", "0"]
                         result = self._run_benchmark_command(cmd, "cpu", p_size, g_size, 0)
                         results["runs_cpu"].append(result)
             except Exception as e:
@@ -817,7 +817,7 @@ class LlamaBenchmark(BaseBenchmark):
 
         for gpu_device in gpus_to_test:
             print(f"\n🔄 Testing GPU: {gpu_device['name']} (Index: {gpu_device['index']})")
-            # Only set GGML_VULKAN_DEVICE per device; do not force driver unless user asked
+            # Only set GGML_VK_VISIBLE_DEVICES per device; do not force driver unless user asked
             self.set_gpu_selection(gpu_device['index'], self.vk_driver_files if self.vk_driver_files else None)
 
             # Create device-specific result container
@@ -834,7 +834,7 @@ class LlamaBenchmark(BaseBenchmark):
                 for p_size in prompt_sizes:
                     for g_size in generation_sizes:
                         print(f"Running GPU benchmark: prompt={p_size}, generation={g_size}")
-                        cmd = [gpu_binary, "-m", self.project_model_path, "-p", str(p_size), "-n", str(g_size)]
+                        cmd = [gpu_binary, "-m", self.project_model_path, "-p", str(p_size), "-n", str(g_size), "-sm", "none", "-mg", "0"]
                         gpu_env = self._get_gpu_env_vars()
                         if gpu_env:
                             print(f"🎯 GPU selection: {gpu_env}")
