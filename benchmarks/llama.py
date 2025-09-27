@@ -762,8 +762,9 @@ class LlamaBenchmark(BaseBenchmark):
         if "cpu_build_timing" in self.results["build"]:
             results["cpu_build_timing"] = self.results["build"]["cpu_build_timing"]
 
-        prompt_sizes = [512]
-        generation_sizes = [64]
+        prompt_sizes = [512]  # Keep original prompt size
+        cpu_generation_sizes = [64]  # CPU uses smaller generation size
+        gpu_generation_sizes = [512]  # GPU uses larger generation size for better performance measurement
 
         # CPU
         if "cpu_bench_binary" in self.results["build"]:
@@ -771,7 +772,7 @@ class LlamaBenchmark(BaseBenchmark):
             try:
                 cpu_binary = self.results["build"]["cpu_bench_binary"]
                 for p_size in prompt_sizes:
-                    for g_size in generation_sizes:
+                    for g_size in cpu_generation_sizes:
                         print(f"Running CPU benchmark: prompt={p_size}, generation={g_size}")
                         cmd = [cpu_binary, "-m", self.project_model_path, "-p", str(p_size), "-n", str(g_size), "-sm", "none", "-mg", "0"]
                         result = self._run_benchmark_command(cmd, "cpu", p_size, g_size, 0)
@@ -832,7 +833,7 @@ class LlamaBenchmark(BaseBenchmark):
 
             try:
                 for p_size in prompt_sizes:
-                    for g_size in generation_sizes:
+                    for g_size in gpu_generation_sizes:
                         print(f"Running GPU benchmark: prompt={p_size}, generation={g_size}")
                         cmd = [gpu_binary, "-m", self.project_model_path, "-p", str(p_size), "-n", str(g_size), "-sm", "none", "-mg", "0"]
                         gpu_env = self._get_gpu_env_vars()
