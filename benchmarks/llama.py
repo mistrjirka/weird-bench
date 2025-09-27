@@ -774,7 +774,7 @@ class LlamaBenchmark(BaseBenchmark):
                 for p_size in prompt_sizes:
                     for g_size in cpu_generation_sizes:
                         print(f"Running CPU benchmark: prompt={p_size}, generation={g_size}")
-                        cmd = [cpu_binary, "-m", self.project_model_path, "-p", str(p_size), "-n", str(g_size), "-sm", "none", "-mg", "0"]
+                        cmd = [cpu_binary, "-m", self.project_model_path, "-p", str(p_size), "-n", str(g_size)]
                         result = self._run_benchmark_command(cmd, "cpu", p_size, g_size, 0)
                         results["runs_cpu"].append(result)
             except Exception as e:
