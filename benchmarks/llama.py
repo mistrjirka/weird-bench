@@ -207,8 +207,10 @@ class LlamaBenchmark(BaseBenchmark):
         try:
             result = subprocess.run(
                 ["vulkaninfo"],
-                capture_output=True, text=True, timeout=30,
-                stderr=subprocess.DEVNULL  # Suppress warnings like the AWK script
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,  # Suppress warnings like the AWK script
+                text=True, 
+                timeout=30
             )
             
             if result.returncode != 0:
