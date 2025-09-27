@@ -629,14 +629,15 @@ class LlamaBenchmark(BaseBenchmark):
         results = {
             "runs_cpu": [],
             "runs_gpu": [],
+            "device_runs": []  # New format: separate results per device
         }
 
-        if self.gpu_device_index is not None or self.vk_driver_files:
-            results["gpu_selection"] = {
-                "device_index": self.gpu_device_index,
-                "vk_driver_files": self.vk_driver_files,
-                "available_gpus": self.available_gpus
-            }
+        # Store GPU selection info for debugging
+        results["gpu_selection"] = {
+            "device_index": self.gpu_device_index,
+            "vk_driver_files": self.vk_driver_files,
+            "available_gpus": self.available_gpus
+        }
 
         prompt_sizes = [512]
         generation_sizes = [64]
@@ -696,23 +697,60 @@ class LlamaBenchmark(BaseBenchmark):
             # Only set GGML_VULKAN_DEVICE per device; do not force driver unless user asked
             self.set_gpu_selection(gpu_device['index'], self.vk_driver_files if self.vk_driver_files else None)
 
-            for p_size in prompt_sizes:
-                for g_size in generation_sizes:
-                    print(f"Running GPU benchmark: prompt={p_size}, generation={g_size}")
-                    cmd = [gpu_binary, "-m", self.project_model_path, "-p", str(p_size), "-n", str(g_size)]
-                    gpu_env = self._get_gpu_env_vars()
-                    if gpu_env:
-                        print(f"🎯 GPU selection: {gpu_env}")
-                    result = self._run_benchmark_command(cmd, "gpu", p_size, g_size, 99, gpu_env)
-                    result["gpu_device"] = gpu_device
-                    
-                    # Override gpu_info with specific GPU name instead of comma-separated list
-                    if "metrics" in result and "system_info" in result["metrics"]:
-                        result["metrics"]["system_info"]["gpu_info"] = gpu_device['name']
-                    
-                    results["runs_gpu"].append(result)
+            # Create device-specific result container
+            device_result = {
+                "device_name": gpu_device['name'],
+                "device_index": gpu_device['index'],
+                "device_driver": gpu_device.get('driver', 'unknown'),
+                "device_type": "gpu",
+                "runs": [],
+                "success": True
+            }
 
-            print(f"✅ Completed testing GPU: {gpu_device['name']}")
+            try:
+                for p_size in prompt_sizes:
+                    for g_size in generation_sizes:
+                        print(f"Running GPU benchmark: prompt={p_size}, generation={g_size}")
+                        cmd = [gpu_binary, "-m", self.project_model_path, "-p", str(p_size), "-n", str(g_size)]
+                        gpu_env = self._get_gpu_env_vars()
+                        if gpu_env:
+                            print(f"🎯 GPU selection: {gpu_env}")
+                        result = self._run_benchmark_command(cmd, "gpu", p_size, g_size, 99, gpu_env)
+                        
+                        # Simplify result - remove verbose raw_json, keep only essential data
+                        simplified_result = {
+                            "prompt_size": p_size,
+                            "generation_size": g_size,
+                            "ngl": 99,
+                            "returncode": result.get("returncode", 0),
+                            "elapsed_seconds": result.get("elapsed_seconds", 0),
+                            "success": result.get("returncode", 0) == 0,
+                            "metrics": result.get("metrics", {}),
+                            "essential_info": result.get("essential_info", {})
+                        }
+                        
+                        # Override gpu_info with specific GPU name instead of comma-separated list
+                        if "metrics" in simplified_result and "system_info" in simplified_result["metrics"]:
+                            simplified_result["metrics"]["system_info"]["gpu_info"] = gpu_device['name']
+                        
+                        device_result["runs"].append(simplified_result)
+                        
+                        # Also add to legacy format for backwards compatibility
+                        legacy_result = result.copy()
+                        legacy_result["gpu_device"] = gpu_device
+                        if "metrics" in legacy_result and "system_info" in legacy_result["metrics"]:
+                            legacy_result["metrics"]["system_info"]["gpu_info"] = gpu_device['name']
+                        # Remove verbose raw_json from legacy format too - already removed in _run_benchmark_command
+                        results["runs_gpu"].append(legacy_result)
+                        
+                results["device_runs"].append(device_result)
+                print(f"✅ Completed testing GPU: {gpu_device['name']}")
+                
+            except Exception as e:
+                print(f"❌ Failed testing GPU {gpu_device['name']}: {e}")
+                device_result["success"] = False
+                device_result["error"] = str(e)
+                results["device_runs"].append(device_result)
 
         # restore selection silently (no extra noisy print)
         self.gpu_device_index = None  # keep clean
@@ -747,10 +785,22 @@ class LlamaBenchmark(BaseBenchmark):
             try:
                 json_results = json.loads(result.stdout or "[]")
                 metrics = self._parse_llama_bench_json(json_results, prompt_size, generation_size)
+                
+                # Extract essential info from raw JSON for debugging but don't store the full verbose data
+                essential_raw_info = None
+                if json_results:
+                    first_result = json_results[0]
+                    essential_raw_info = {
+                        "build_commit": first_result.get("build_commit"),
+                        "model_type": first_result.get("model_type"),
+                        "backends": first_result.get("backends"),
+                        "test_time": first_result.get("test_time")
+                    }
+                
                 return {
                     "type": run_type, "prompt_size": prompt_size, "generation_size": generation_size,
                     "ngl": ngl, "returncode": result.returncode, "elapsed_seconds": elapsed_time,
-                    "metrics": metrics, "raw_json": json_results,
+                    "metrics": metrics, "essential_info": essential_raw_info,
                 }
             except json.JSONDecodeError as e:
                 print(f"⚠️  Failed to parse JSON output, falling back to text parsing: {e}")
