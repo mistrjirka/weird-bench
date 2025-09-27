@@ -757,6 +757,10 @@ class LlamaBenchmark(BaseBenchmark):
             "vk_driver_files": self.vk_driver_files,
             "available_gpus": self.available_gpus
         }
+        
+        # Store CPU build timing data if available
+        if "cpu_build_timing" in self.results["build"]:
+            results["cpu_build_timing"] = self.results["build"]["cpu_build_timing"]
 
         prompt_sizes = [512]
         generation_sizes = [64]
