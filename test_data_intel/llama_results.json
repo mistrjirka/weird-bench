@@ -1,6 +1,6 @@
 {
   "benchmark_name": "llama",
-  "timestamp": 1758991078.3638535,
+  "timestamp": 1759001195.0457392,
   "results": {
     "runs_cpu": [
       {
@@ -9,7 +9,7 @@
         "generation_size": 64,
         "ngl": 0,
         "returncode": 0,
-        "elapsed_seconds": 84.53948402699996,
+        "elapsed_seconds": 83.48282122599994,
         "metrics": {
           "system_info": {
             "cpu_info": "11th Gen Intel(R) Core(TM) i7-1165G7 @ 2.80GHz",
@@ -22,55 +22,55 @@
             "n_gpu_layers": 99
           },
           "prompt_processing": {
-            "avg_time_ns": 10231288634,
-            "avg_tokens_per_sec": 50.044358,
-            "stddev_time_ns": 68157920,
-            "stddev_tokens_per_sec": 0.335064,
-            "avg_time_ms": 10231.288634,
+            "avg_time_ns": 10036474099,
+            "avg_tokens_per_sec": 51.015893,
+            "stddev_time_ns": 69434210,
+            "stddev_tokens_per_sec": 0.354493,
+            "avg_time_ms": 10036.474099,
             "samples_ns": [
-              10123125367,
-              10208387337,
-              10254875179,
-              10281413904,
-              10288641385
+              9929199622,
+              10010245350,
+              10055050032,
+              10085588777,
+              10102286717
             ],
             "samples_ts": [
-              50.5773,
-              50.1548,
-              49.9275,
-              49.7986,
-              49.7636
+              51.5651,
+              51.1476,
+              50.9197,
+              50.7655,
+              50.6816
             ]
           },
           "generation": {
-            "avg_time_ns": 4556925201,
-            "avg_tokens_per_sec": 14.044591,
-            "stddev_time_ns": 7781602,
-            "stddev_tokens_per_sec": 0.024007,
-            "avg_time_ms": 4556.925201,
+            "avg_time_ns": 4568452850,
+            "avg_tokens_per_sec": 14.009137,
+            "stddev_time_ns": 5814776,
+            "stddev_tokens_per_sec": 0.017832,
+            "avg_time_ms": 4568.45285,
             "samples_ns": [
-              4544793465,
-              4557433792,
-              4564208115,
-              4555077316,
-              4563113320
+              4569371272,
+              4563048352,
+              4561852875,
+              4573723962,
+              4574267793
             ],
             "samples_ts": [
-              14.082,
-              14.043,
-              14.0221,
-              14.0503,
-              14.0255
+              14.0063,
+              14.0257,
+              14.0294,
+              13.993,
+              13.9913
             ]
           },
-          "tokens_per_second": 14.044591,
-          "total_time_ms": 14788.213835
+          "tokens_per_second": 14.009137,
+          "total_time_ms": 14604.926948999999
         },
         "essential_info": {
-          "build_commit": "234e2ff",
+          "build_commit": "4807e8f",
           "model_type": "qwen3 4B IQ4_NL - 4.5 bpw",
           "backends": "CPU",
-          "test_time": "2025-09-27T16:29:27Z"
+          "test_time": "2025-09-27T19:18:05Z"
         }
       }
     ],
@@ -81,7 +81,7 @@
         "generation_size": 512,
         "ngl": 99,
         "returncode": 0,
-        "elapsed_seconds": 426.55028303999995,
+        "elapsed_seconds": 427.0025851319997,
         "metrics": {
           "system_info": {
             "cpu_info": "11th Gen Intel(R) Core(TM) i7-1165G7 @ 2.80GHz",
@@ -94,55 +94,55 @@
             "n_gpu_layers": 99
           },
           "prompt_processing": {
-            "avg_time_ns": 7279110876,
-            "avg_tokens_per_sec": 70.338597,
-            "stddev_time_ns": 17789571,
-            "stddev_tokens_per_sec": 0.171894,
-            "avg_time_ms": 7279.110876,
+            "avg_time_ns": 7308292464,
+            "avg_tokens_per_sec": 70.057473,
+            "stddev_time_ns": 8094480,
+            "stddev_tokens_per_sec": 0.077526,
+            "avg_time_ms": 7308.292464,
             "samples_ns": [
-              7301751225,
-              7288616355,
-              7282635171,
-              7263951812,
-              7258599818
+              7302895406,
+              7301520131,
+              7320779489,
+              7312074145,
+              7304193153
             ],
             "samples_ts": [
-              70.1202,
-              70.2465,
-              70.3042,
-              70.485,
-              70.537
+              70.1092,
+              70.1224,
+              69.9379,
+              70.0212,
+              70.0967
             ]
           },
           "generation": {
-            "avg_time_ns": 75967164410,
-            "avg_tokens_per_sec": 6.739757,
-            "stddev_time_ns": 57826370,
-            "stddev_tokens_per_sec": 0.005126,
-            "avg_time_ms": 75967.16441,
+            "avg_time_ns": 76229266003,
+            "avg_tokens_per_sec": 6.716582,
+            "stddev_time_ns": 38503833,
+            "stddev_tokens_per_sec": 0.003391,
+            "avg_time_ms": 76229.266003,
             "samples_ns": [
-              76064899163,
-              75942515293,
-              75944357114,
-              75968776982,
-              75915273501
+              76290164188,
+              76230055766,
+              76218340461,
+              76183726275,
+              76224043328
             ],
             "samples_ts": [
-              6.73109,
-              6.74194,
-              6.74178,
-              6.73961,
-              6.74436
+              6.71122,
+              6.71651,
+              6.71754,
+              6.7206,
+              6.71704
             ]
           },
-          "tokens_per_second": 6.739757,
-          "total_time_ms": 83246.275286
+          "tokens_per_second": 6.716582,
+          "total_time_ms": 83537.558467
         },
         "essential_info": {
-          "build_commit": "234e2ff",
+          "build_commit": "4807e8f",
           "model_type": "qwen3 4B IQ4_NL - 4.5 bpw",
           "backends": "Vulkan",
-          "test_time": "2025-09-27T16:30:53Z"
+          "test_time": "2025-09-27T19:19:29Z"
         },
         "gpu_device": {
           "index": 0,
@@ -164,7 +164,7 @@
             "generation_size": 512,
             "ngl": 99,
             "returncode": 0,
-            "elapsed_seconds": 426.55028303999995,
+            "elapsed_seconds": 427.0025851319997,
             "success": true,
             "metrics": {
               "system_info": {
@@ -178,55 +178,55 @@
                 "n_gpu_layers": 99
               },
               "prompt_processing": {
-                "avg_time_ns": 7279110876,
-                "avg_tokens_per_sec": 70.338597,
-                "stddev_time_ns": 17789571,
-                "stddev_tokens_per_sec": 0.171894,
-                "avg_time_ms": 7279.110876,
+                "avg_time_ns": 7308292464,
+                "avg_tokens_per_sec": 70.057473,
+                "stddev_time_ns": 8094480,
+                "stddev_tokens_per_sec": 0.077526,
+                "avg_time_ms": 7308.292464,
                 "samples_ns": [
-                  7301751225,
-                  7288616355,
-                  7282635171,
-                  7263951812,
-                  7258599818
+                  7302895406,
+                  7301520131,
+                  7320779489,
+                  7312074145,
+                  7304193153
                 ],
                 "samples_ts": [
-                  70.1202,
-                  70.2465,
-                  70.3042,
-                  70.485,
-                  70.537
+                  70.1092,
+                  70.1224,
+                  69.9379,
+                  70.0212,
+                  70.0967
                 ]
               },
               "generation": {
-                "avg_time_ns": 75967164410,
-                "avg_tokens_per_sec": 6.739757,
-                "stddev_time_ns": 57826370,
-                "stddev_tokens_per_sec": 0.005126,
-                "avg_time_ms": 75967.16441,
+                "avg_time_ns": 76229266003,
+                "avg_tokens_per_sec": 6.716582,
+                "stddev_time_ns": 38503833,
+                "stddev_tokens_per_sec": 0.003391,
+                "avg_time_ms": 76229.266003,
                 "samples_ns": [
-                  76064899163,
-                  75942515293,
-                  75944357114,
-                  75968776982,
-                  75915273501
+                  76290164188,
+                  76230055766,
+                  76218340461,
+                  76183726275,
+                  76224043328
                 ],
                 "samples_ts": [
-                  6.73109,
-                  6.74194,
-                  6.74178,
-                  6.73961,
-                  6.74436
+                  6.71122,
+                  6.71651,
+                  6.71754,
+                  6.7206,
+                  6.71704
                 ]
               },
-              "tokens_per_second": 6.739757,
-              "total_time_ms": 83246.275286
+              "tokens_per_second": 6.716582,
+              "total_time_ms": 83537.558467
             },
             "essential_info": {
-              "build_commit": "234e2ff",
+              "build_commit": "4807e8f",
               "model_type": "qwen3 4B IQ4_NL - 4.5 bpw",
               "backends": "Vulkan",
-              "test_time": "2025-09-27T16:30:53Z"
+              "test_time": "2025-09-27T19:19:29Z"
             }
           }
         ],
@@ -246,9 +246,9 @@
       ]
     },
     "cpu_build_timing": {
-      "config_time_seconds": 0.9996729380000033,
-      "build_time_seconds": 128.331115662,
-      "total_time_seconds": 129.3307886
+      "config_time_seconds": 0.9039470779998737,
+      "build_time_seconds": 124.38564698299979,
+      "total_time_seconds": 125.28959406099966
     }
   }
 }

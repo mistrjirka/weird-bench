@@ -661,13 +661,27 @@ class LlamaBenchmark(BaseBenchmark):
                             device_info = match.group(2).strip()
                             
                             # Extract device name and driver from format "Device Name (Driver)"
-                            name_match = re.match(r'(.+?)\s*\(([^)]+)\)', device_info)
-                            if name_match:
-                                device_name = name_match.group(1).strip()
-                                device_driver = name_match.group(2).strip()
+                            # Handle nested parentheses by finding the outermost ones
+                            p1 = device_info.find("(")
+                            p2 = device_info.rfind(")")
+                            
+                            if p2 > p1 >= 0:
+                                # Extract everything before the last parentheses as device name
+                                # and everything inside the last parentheses as driver
+                                potential_name = device_info[:p1].strip()
+                                potential_driver = device_info[p1+1:p2].strip()
+                                
+                                # Check if this looks like a proper driver name vs part of device name
+                                if potential_driver.lower() in ['nvidia', 'amd', 'intel', 'r', 'tm'] or len(potential_driver) < 10:
+                                    device_name = potential_name
+                                    device_driver = self._detect_gpu_driver_from_name(device_name)
+                                else:
+                                    # The parentheses content is likely part of the device name
+                                    device_name = device_info
+                                    device_driver = self._detect_gpu_driver_from_name(device_name)
                             else:
                                 device_name = device_info
-                                device_driver = "vulkan"
+                                device_driver = self._detect_gpu_driver_from_name(device_name)
                             
                             devices.append({
                                 "index": device_index,
