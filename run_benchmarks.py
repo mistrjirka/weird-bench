@@ -376,9 +376,6 @@ def main():
     parser.add_argument("--skip-build", action="store_true",
                         help="Skip building and reuse existing binaries (faster for debugging)")
 
-    parser.add_argument("--allow-missing-time", action="store_true",
-                        help="Allow running even if GNU time is not installed (not recommended)")
-
     args = parser.parse_args()
 
     if args.runs < 1:
@@ -388,13 +385,15 @@ def main():
     runner = BenchmarkRunner(args.output_dir, args.api_url)
 
     # Exit early if GNU time utility is missing — many benchmarks rely on it for
-    # producing numeric timing fields that the server expects. Provide a clear
-    # message and hint to run the installer scripts. The flag
-    # --allow-missing-time can be used to override this behavior.
-    if not runner.gnu_time and not getattr(args, 'allow_missing_time', False):
-        print("\n❌ GNU time utility not found. This tool is required to produce detailed process metrics used by some benchmarks and by the upload validation.\n")
-        print("Please install GNU time and try again. Example (Ubuntu):\n  sudo apt update && sudo apt install -y time\n")
-        print("You can override this check with --allow-missing-time (not recommended).")
+    # producing numeric timing fields that the server expects. This is now a hard requirement.
+    if not runner.gnu_time:
+        print("\n❌ GNU time utility not found. This tool is required to produce detailed process metrics used by benchmarks and upload validation.\n")
+        print("Please install GNU time and try again. Installation examples:")
+        print("  Ubuntu/Debian: sudo apt update && sudo apt install -y time")
+        print("  Fedora/RHEL:   sudo dnf install -y time")
+        print("  Arch Linux:    sudo pacman -S time")
+        print("  macOS:         brew install gnu-time")
+        print("\nAfter installation, restart the benchmark to continue.")
         sys.exit(2)
 
     # Handle GPU listing
