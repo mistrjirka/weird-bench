@@ -159,22 +159,43 @@ class UnifiedBenchmarkRunner:
         if not self.system_info.cpu_only and not getattr(args, 'no_gpu', False):
             if "vulkan_bench_binary" in build_result:
                 vulkan_binary = build_result["vulkan_bench_binary"]
-                for gpu_device in self.system_info.get_gpu_devices():
-                    # Find the GPU device index for this hardware ID
-                    gpu_index = int(gpu_device.hw_id.split('-')[1]) if '-' in gpu_device.hw_id else 0
-                    benchmark.set_gpu_selection(gpu_device_index=gpu_index)
-                    
-                    gpu_result = benchmark._run_benchmark_command(
-                        [vulkan_binary, "-m", benchmark.project_model_path, "-p", "2048", "-n", "64", "-sm", "none", "-mg", str(gpu_index)],
-                        "gpu", 2048, 64, 99, benchmark._get_gpu_env_vars()
-                    )
-                    
-                    if gpu_result.get("returncode") == 0 and not gpu_result.get("failed"):
-                        gpu_benchmarks.append(LlamaRunResult(
-                            prompt_speed=gpu_result["metrics"]["prompt_processing"]["avg_tokens_per_sec"],
-                            generation_speed=gpu_result["metrics"]["generation"]["avg_tokens_per_sec"],
-                            hw_id=gpu_device.hw_id
-                        ))
+                # Prefer device indices from the LlamaBenchmark detection to ensure correct selection
+                detected = getattr(benchmark, "available_gpus", []) or []
+                # If none detected (shouldn't happen), fall back to system_info order assuming matching
+                if detected:
+                    # Map device index -> name
+                    device_map = {d["index"]: d for d in detected if "index" in d}
+                    indices = sorted(device_map.keys())
+                    for gpu_index in indices:
+                        benchmark.set_gpu_selection(gpu_device_index=gpu_index)
+                        gpu_result = benchmark._run_benchmark_command(
+                            [vulkan_binary, "-m", benchmark.project_model_path, "-p", "2048", "-n", "64", "-sm", "none", "-mg", str(gpu_index)],
+                            "gpu", 2048, 64, 99, benchmark._get_gpu_env_vars()
+                        )
+                        if gpu_result.get("returncode") == 0 and not gpu_result.get("failed"):
+                            # Tag by hw_id resolved via detector matching on name
+                            device_name = device_map[gpu_index]["name"]
+                            match_hw = self.hardware_detector.find_matching_device(device_name, "gpu") or f"gpu-{gpu_index}"
+                            gpu_benchmarks.append(LlamaRunResult(
+                                prompt_speed=gpu_result["metrics"]["prompt_processing"]["avg_tokens_per_sec"],
+                                generation_speed=gpu_result["metrics"]["generation"]["avg_tokens_per_sec"],
+                                hw_id=match_hw
+                            ))
+                else:
+                    # Fallback to iterating detected hardware GPUs by order
+                    for gpu_device in self.system_info.get_gpu_devices():
+                        gpu_index = int(gpu_device.hw_id.split('-')[1]) if '-' in gpu_device.hw_id else 0
+                        benchmark.set_gpu_selection(gpu_device_index=gpu_index)
+                        gpu_result = benchmark._run_benchmark_command(
+                            [vulkan_binary, "-m", benchmark.project_model_path, "-p", "2048", "-n", "64", "-sm", "none", "-mg", str(gpu_index)],
+                            "gpu", 2048, 64, 99, benchmark._get_gpu_env_vars()
+                        )
+                        if gpu_result.get("returncode") == 0 and not gpu_result.get("failed"):
+                            gpu_benchmarks.append(LlamaRunResult(
+                                prompt_speed=gpu_result["metrics"]["prompt_processing"]["avg_tokens_per_sec"],
+                                generation_speed=gpu_result["metrics"]["generation"]["avg_tokens_per_sec"],
+                                hw_id=gpu_device.hw_id
+                            ))
         
         # Derive compile/build time similarly to Reversan: prefer CPU build timing total
         compile_time = 0.0
@@ -226,6 +247,7 @@ class UnifiedBenchmarkRunner:
                 
             else:
                 # GPU result
+                # Resolve a stable hw_id by device name
                 gpu_hw_id = self.hardware_detector.find_matching_device(
                     device_run["device_name"], "gpu"
                 ) or f"gpu-{len(gpu_results)}"

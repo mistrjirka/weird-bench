@@ -160,7 +160,9 @@ class GlobalHardwareDetector:
                 gpus.append({
                     'name': name,
                     'manufacturer': manufacturer,
-                    'framework': 'VULKAN'
+                    'framework': 'VULKAN',
+                    'index': dev.get('index'),
+                    'icd_path': dev.get('icd_path')
                 })
             return gpus
         except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
@@ -299,6 +301,10 @@ class GlobalHardwareDetector:
         unique_gpus: List[Dict[str, str]] = []
 
         def is_same_device(a: Dict[str, str], b: Dict[str, str]) -> bool:
+            # If both have explicit Vulkan indices and they differ, they are different devices
+            if (a.get('index') is not None and b.get('index') is not None 
+                and a.get('framework') == 'VULKAN' and b.get('framework') == 'VULKAN'):
+                return a.get('index') == b.get('index')
             name_a = normalize_hardware_name(a.get('name', ''))
             name_b = normalize_hardware_name(b.get('name', ''))
             if a.get('manufacturer') != b.get('manufacturer'):

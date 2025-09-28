@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "platform": "Linux-6.16.8-arch1-1-x86_64",
+    "host": "grammetry",
+    "timestamp": 1759082633.6642992,
+    "cpu_only": false,
+    "hardware": {
+      "cpu-0": {
+        "hw_id": "cpu-0",
+        "name": "Intel Xeon CPU E5-2680 v4 @ 2.40GHz",
+        "type": "cpu",
+        "manufacturer": "Intel",
+        "cores": 14,
+        "threads": 28,
+        "framework": null,
+        "driver_version": null,
+        "memory_mb": null
+      },
+      "gpu-0": {
+        "hw_id": "gpu-0",
+        "name": "NVIDIA GeForce RTX 3060",
+        "type": "gpu",
+        "manufacturer": "NVIDIA",
+        "cores": null,
+        "threads": null,
+        "framework": "VULKAN",
+        "driver_version": null,
+        "memory_mb": null
+      }
+    }
+  },
+  "llama": {
+    "compile_time": 142.009224814,
+    "cpu_benchmark": {
+      "prompt_speed": 83.143183,
+      "generation_speed": 22.925146,
+      "hw_id": "cpu-0"
+    },
+    "gpu_benchmarks": [
+      {
+        "prompt_speed": 2400.26105,
+        "generation_speed": 112.378221,
+        "hw_id": "gpu-0"
+      }
+    ]
+  },
+  "reversan": {
+    "compile_time": 4.850692797000008,
+    "depth_benchmarks": [
+      {
+        "depth": 1,
+        "time_seconds": 0.0,
+        "memory_kb": 3392
+      },
+      {
+        "depth": 2,
+        "time_seconds": 0.0,
+        "memory_kb": 3208
+      },
+      {
+        "depth": 3,
+        "time_seconds": 0.0,
+        "memory_kb": 3376
+      },
+      {
+        "depth": 4,
+        "time_seconds": 0.0,
+        "memory_kb": 3392
+      },
+      {
+        "depth": 5,
+        "time_seconds": 0.01,
+        "memory_kb": 3392
+      },
+      {
+        "depth": 6,
+        "time_seconds": 0.04,
+        "memory_kb": 3664
+      },
+      {
+        "depth": 7,
+        "time_seconds": 0.1,
+        "memory_kb": 3664
+      },
+      {
+        "depth": 8,
+        "time_seconds": 0.15,
+        "memory_kb": 3840
+      },
+      {
+        "depth": 9,
+        "time_seconds": 1.02,
+        "memory_kb": 4792
+      },
+      {
+        "depth": 10,
+        "time_seconds": 2.18,
+        "memory_kb": 5448
+      },
+      {
+        "depth": 11,
+        "time_seconds": 8.17,
+        "memory_kb": 13756
+      },
+      {
+        "depth": 12,
+        "time_seconds": 56.91,
+        "memory_kb": 91036
+      }
+    ],
+    "thread_benchmarks": [
+      {
+        "threads": 28,
+        "time_seconds": 28.71,
+        "memory_kb": 65932
+      },
+      {
+        "threads": 14,
+        "time_seconds": 28.67,
+        "memory_kb": 40752
+      },
+      {
+        "threads": 8,
+        "time_seconds": 27.99,
+        "memory_kb": 31136
+      },
+      {
+        "threads": 4,
+        "time_seconds": 21.52,
+        "memory_kb": 25148
+      },
+      {
+        "threads": 2,
+        "time_seconds": 12.0,
+        "memory_kb": 23576
+      },
+      {
+        "threads": 1,
+        "time_seconds": 7.57,
+        "memory_kb": 13756
+      }
+    ]
+  },
+  "sevenzip": {
+    "usage_percent": 2366.0,
+    "ru_mips": 3596.0,
+    "total_mips": 83637.0
+  },
+  "blender": {
+    "cpu": {
+      "classroom": 52.735750043482575,
+      "junkshop": 73.7606270955743,
+      "monster": 105.64113705741596
+    },
+    "gpus": [
+      {
+        "hw_id": "gpu-0",
+        "scenes": {
+          "classroom": 780.9356002903398,
+          "junkshop": 885.8893258796971,
+          "monster": 1342.2561344479268
+        }
+      },
+      {
+        "hw_id": "gpu-0",
+        "scenes": {
+          "classroom": 587.4553445228463,
+          "junkshop": 663.6005972006816,
+          "monster": 1011.6057604736444
+        }
+      }
+    ]
+  }
+}
