@@ -169,7 +169,7 @@ class UnifiedBenchmarkRunner:
                     for gpu_index in indices:
                         benchmark.set_gpu_selection(gpu_device_index=gpu_index)
                         gpu_result = benchmark._run_benchmark_command(
-                            [vulkan_binary, "-m", benchmark.project_model_path, "-p", "2048", "-n", "64", "-sm", "none", "-mg", 0],
+                            [vulkan_binary, "-m", benchmark.project_model_path, "-p", "2048", "-n", "64", "-sm", "none", "-mg", "0"],
                             "gpu", 2048, 64, 99, benchmark._get_gpu_env_vars()
                         )
                         if gpu_result.get("returncode") == 0 and not gpu_result.get("failed"):
