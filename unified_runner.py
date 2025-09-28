@@ -208,10 +208,9 @@ class UnifiedBenchmarkRunner:
     def _run_blender_benchmark(self, args: Any = None) -> BlenderBenchmarkResult:
         """Run Blender benchmark with unified output."""
         benchmark = BlenderBenchmark(self.output_dir)
-        benchmark.setup()
         
-        # Run the legacy benchmark
-        legacy_result = benchmark.run()
+        # Run the legacy benchmark, ensuring CLI args (e.g., --no-gpu) are respected
+        legacy_result = benchmark.run(args)
         
         cpu_result = None
         gpu_results = []
