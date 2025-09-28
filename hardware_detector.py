@@ -106,21 +106,19 @@ class GlobalHardwareDetector:
         """Detect GPU information using multiple methods."""
         # Method 1: Try vulkaninfo (most reliable for gaming GPUs)
         gpus_vulkan = self._detect_gpus_vulkan()
-        
-        # Method 2: Try nvidia-ml-py for NVIDIA GPUs
-        gpus_nvidia = self._detect_gpus_nvidia()
-        
-        # Method 3: Try lspci for fallback
-        gpus_lspci = self._detect_gpus_lspci()
-        
-        # Combine and deduplicate
-        all_gpus = []
-        all_gpus.extend(gpus_vulkan)
-        all_gpus.extend(gpus_nvidia) 
-        all_gpus.extend(gpus_lspci)
-        
-        # Deduplicate by name similarity
-        unique_gpus = self._deduplicate_gpus(all_gpus)
+
+        if gpus_vulkan:
+            print(f"  ✅ Vulkan detected {len(gpus_vulkan)} GPU(s); skipping other GPU detection methods")
+            # If Vulkan succeeded (at least one real GPU found), honor it and skip other methods
+            unique_gpus = self._deduplicate_gpus(gpus_vulkan)
+        else:
+            # Fallback path: try vendor-specific and lspci
+            gpus_nvidia = self._detect_gpus_nvidia()
+            gpus_lspci = self._detect_gpus_lspci()
+            all_gpus = []
+            all_gpus.extend(gpus_nvidia)
+            all_gpus.extend(gpus_lspci)
+            unique_gpus = self._deduplicate_gpus(all_gpus)
         
         for gpu_info in unique_gpus:
             gpu_id = generate_hardware_id("gpu", self._gpu_count)
@@ -195,6 +193,10 @@ class GlobalHardwareDetector:
         """Detect NVIDIA GPUs using nvidia-ml-py or nvidia-smi."""
         gpus = []
         
+        # Fast exit if nvidia-smi is not available
+        if not shutil.which('nvidia-smi'):
+            return gpus
+
         try:
             # Try nvidia-smi first (more commonly available)
             result = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,driver_version', 
@@ -287,27 +289,46 @@ class GlobalHardwareDetector:
             return 'Unknown'
     
     def _deduplicate_gpus(self, gpu_list: List[Dict[str, str]]) -> List[Dict[str, str]]:
-        """Remove duplicate GPUs detected by different methods."""
+        """Remove duplicate GPUs detected by different methods.
+        Preference order when duplicates/conflicts detected for same manufacturer:
+        VULKAN > CUDA/other > UNKNOWN framework.
+        """
         if not gpu_list:
             return []
-        
-        unique_gpus = []
-        seen_names = set()
-        
-        for gpu in gpu_list:
-            gpu_name = normalize_hardware_name(gpu['name'])
-            
-            # Check if we've seen a similar GPU name
-            is_duplicate = False
-            for seen_name in seen_names:
-                if self._gpu_names_similar(gpu_name, seen_name):
-                    is_duplicate = True
+
+        unique_gpus: List[Dict[str, str]] = []
+
+        def is_same_device(a: Dict[str, str], b: Dict[str, str]) -> bool:
+            name_a = normalize_hardware_name(a.get('name', ''))
+            name_b = normalize_hardware_name(b.get('name', ''))
+            if a.get('manufacturer') != b.get('manufacturer'):
+                return False
+            # Treat as same if names are similar OR one is a generic vendor name
+            generic_tokens = {"amd/ati", "nvidia", "nvidia corporation", "intel"}
+            if name_a.lower() in generic_tokens or name_b.lower() in generic_tokens:
+                return True
+            return self._gpu_names_similar(name_a, name_b)
+
+        def prefer(a: Dict[str, str], b: Dict[str, str]) -> Dict[str, str]:
+            order = {"VULKAN": 3, "CUDA": 2, "HIP": 2, "OPENCL": 2, "UNKNOWN": 0, None: 0}
+            fa = (a.get('framework') or 'UNKNOWN').upper()
+            fb = (b.get('framework') or 'UNKNOWN').upper()
+            if order.get(fa, 0) >= order.get(fb, 0):
+                return a
+            return b
+
+        for cand in gpu_list:
+            replaced = False
+            for i, existing in enumerate(unique_gpus):
+                if is_same_device(cand, existing):
+                    # Keep the one with better framework preference
+                    best = prefer(cand, existing)
+                    unique_gpus[i] = best
+                    replaced = True
                     break
-            
-            if not is_duplicate:
-                seen_names.add(gpu_name)
-                unique_gpus.append(gpu)
-        
+            if not replaced:
+                unique_gpus.append(cand)
+
         return unique_gpus
     
     def _gpu_names_similar(self, name1: str, name2: str, threshold: float = 0.6) -> bool:
