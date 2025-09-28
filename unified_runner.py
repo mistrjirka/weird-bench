@@ -421,7 +421,7 @@ def main():
     parser.add_argument("--list-gpus", action="store_true",
                         help="List available Vulkan GPU devices and exit")
 
-    parser.add_argument("--api-url", default="http://localhost:8000/api",
+    parser.add_argument("--api-url", default="https://weirdbench.eu/api",
                         help="API URL for result uploads")
 
     parser.add_argument("--upload", action="store_true",
