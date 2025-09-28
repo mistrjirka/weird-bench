@@ -43,23 +43,15 @@ class UnifiedBenchmarkRunner:
         # Check for GNU time (required for detailed benchmarking)
         self.gnu_time = self._find_gnu_time()
         if not self.gnu_time:
-            print("⚠️  WARNING: GNU time not found. Some benchmarks may not provide detailed timing information.")
-            print("   Ubuntu/Debian: sudo apt install time")
-            print("   Fedora/RHEL: already included")
-            print("   Arch: already included") 
+            print("⚠️  GNU time utility not found: detailed process metrics will be null for benchmarks that rely on it.")
+        else:
+            print(f"ℹ️  GNU time detected at: {self.gnu_time}")
 
     def _find_gnu_time(self) -> Optional[str]:
-        """Find GNU time command."""
+        """Find a usable 'time' utility. On many distros (incl. Arch), /usr/bin/time is GNU time by default."""
         import shutil
-        for cmd in ["/usr/bin/time", shutil.which("time"), shutil.which("gtime")]:
-            if cmd and os.path.exists(cmd):
-                try:
-                    result = subprocess.run([cmd, "--version"], capture_output=True, text=True, timeout=5)
-                    if result.returncode == 0 and "GNU time" in result.stderr:
-                        return cmd
-                except:
-                    continue
-        return None
+        candidates = ["/usr/bin/time", shutil.which("time"), shutil.which("gtime")]
+        return next((c for c in candidates if c), None)
 
     def detect_hardware(self, cpu_only: bool = False) -> SystemInfo:
         """Detect system hardware and create SystemInfo."""
@@ -109,7 +101,7 @@ class UnifiedBenchmarkRunner:
         for run in legacy_result.get("runs_depth", []):
             depth_benchmarks.append({
                 "depth": run["depth"],
-                "time_seconds": run["metrics"]["elapsed_seconds"],
+                "time_seconds": run["metrics"]["user_seconds"],
                 "memory_kb": run["metrics"]["max_rss_kb"]
             })
         
@@ -117,7 +109,7 @@ class UnifiedBenchmarkRunner:
         for run in legacy_result.get("runs_threads", []):
             thread_benchmarks.append({
                 "threads": run["threads"], 
-                "time_seconds": run["metrics"]["elapsed_seconds"],
+                "time_seconds": run["metrics"]["user_seconds"],
                 "memory_kb": run["metrics"]["max_rss_kb"]
             })
         
@@ -184,8 +176,25 @@ class UnifiedBenchmarkRunner:
                             hw_id=gpu_device.hw_id
                         ))
         
+        # Derive compile/build time similarly to Reversan: prefer CPU build timing total
+        compile_time = 0.0
+        cpu_timing = build_result.get("cpu_build_timing")
+        if isinstance(cpu_timing, dict):
+            compile_time = float(
+                cpu_timing.get("total_time_seconds")
+                or cpu_timing.get("build_time_seconds")
+                or 0.0
+            )
+        else:
+            # Fallback to any top-level timing keys if provided
+            compile_time = float(
+                build_result.get("total_time_seconds")
+                or build_result.get("build_time_seconds")
+                or 0.0
+            )
+
         return LlamaBenchmarkResult(
-            compile_time=build_result.get("total_time_seconds", 0.0),
+            compile_time=compile_time,
             cpu_benchmark=cpu_benchmark,
             gpu_benchmarks=gpu_benchmarks
         )
@@ -285,10 +294,97 @@ class UnifiedBenchmarkRunner:
         
         return filepath
 
+    def upload_existing_file(self, file_path: str) -> bool:
+        """Upload an existing unified results file to the server."""
+        try:
+            result = UnifiedBenchmarkResult.load_from_file(file_path)
+        except Exception as e:
+            print(f"❌ Failed to load results file '{file_path}': {e}")
+            return False
+
+        # Reuse the same upload path but ensure we pass required fields
+        try:
+            import requests
+            print(f"📁 Results saved to: {file_path}")
+            print(f"📁 Saved results to: {file_path}")
+            print(f"🌐 Uploading results to {self.api_url}/upload...")
+
+            run_id = f"{result.meta.host}-{int(result.meta.timestamp)}"
+            form_data = {
+                'run_id': run_id,
+                'timestamp': str(int(result.meta.timestamp)),
+            }
+
+            with open(file_path, 'rb') as f:
+                files = {'file': ('results.json', f, 'application/json')}
+                response = requests.post(
+                    f"{self.api_url}/upload",
+                    data=form_data,
+                    files=files,
+                    timeout=30
+                )
+
+            if response.status_code == 200:
+                result_data = response.json()
+                if result_data.get('success'):
+                    print(f"✅ Upload successful: {result_data.get('message', 'No message')}")
+                    return True
+                else:
+                    print(f"❌ Upload failed: {result_data.get('message', 'Unknown error')}")
+                    return False
+            else:
+                print(f"❌ Upload failed with status {response.status_code}: {response.text}")
+                return False
+        except Exception as e:
+            print(f"❌ Upload failed: {str(e)}")
+            return False
+
     def upload_results(self, result: UnifiedBenchmarkResult) -> bool:
-        """Upload results to server (placeholder for future implementation)."""
-        print("🌐 Upload functionality will be implemented after server-side changes")
-        return True
+        """Upload results to server."""
+        try:
+            import requests
+            
+            # Save to temporary file for upload
+            temp_file = self.save_results(result, format="json")
+            print(f"📁 Saved results to: {temp_file}")
+            
+            # Upload to server
+            print(f"🌐 Uploading results to {self.api_url}/upload...")
+
+            # Required form fields for backend
+            run_id = f"{result.meta.host}-{int(result.meta.timestamp)}"
+            form_data = {
+                'run_id': run_id,
+                'timestamp': str(int(result.meta.timestamp)),
+            }
+
+            with open(temp_file, 'rb') as f:
+                files = {'file': ('results.json', f, 'application/json')}
+                response = requests.post(
+                    f"{self.api_url}/upload",
+                    data=form_data,
+                    files=files,
+                    timeout=30
+                )
+                
+            if response.status_code == 200:
+                result_data = response.json()
+                if result_data.get('success'):
+                    print(f"✅ Upload successful: {result_data.get('message', 'No message')}")
+                    return True
+                else:
+                    print(f"❌ Upload failed: {result_data.get('message', 'Unknown error')}")
+                    return False
+            else:
+                print(f"❌ Upload failed with status {response.status_code}: {response.text}")
+                return False
+                
+        except ImportError:
+            print("❌ Upload requires 'requests' library. Install with: pip install requests")
+            return False
+        except Exception as e:
+            print(f"❌ Upload failed: {str(e)}")
+            return False
 
 
 def main():
@@ -325,8 +421,14 @@ def main():
     parser.add_argument("--list-gpus", action="store_true",
                         help="List available Vulkan GPU devices and exit")
 
-    parser.add_argument("--api-url", default="https://weirdbench.eu/api",
+    parser.add_argument("--api-url", default="http://localhost:8000/api",
                         help="API URL for result uploads")
+
+    parser.add_argument("--upload", action="store_true",
+                        help="Upload results to server after running benchmarks")
+
+    parser.add_argument("--upload-existing", nargs="?", const="latest",
+                        help="Upload an existing results file from output-dir. If no path is provided, uploads the newest unified results file in the output directory.")
 
     args = parser.parse_args()
 
@@ -346,6 +448,34 @@ def main():
             print("\nNo GPU devices found.")
         
         return 0
+
+    # If user requested to upload an existing results file, do so and exit
+    if args.upload_existing is not None:
+        # Determine which file to upload
+        target_path = args.upload_existing
+        if target_path == "latest":
+            # Find newest unified results file in output dir (json or yaml)
+            try:
+                files = [
+                    os.path.join(args.output_dir, f)
+                    for f in os.listdir(args.output_dir)
+                    if (f.startswith("unified_benchmark_results_") and (f.endswith(".json") or f.endswith(".yaml") or f.endswith(".yml")))
+                ]
+                if not files:
+                    print("❌ No unified results files found to upload.")
+                    return 1
+                target_path = max(files, key=lambda p: os.path.getmtime(p))
+            except Exception as e:
+                print(f"❌ Failed to locate latest results file: {e}")
+                return 1
+
+        if not os.path.exists(target_path):
+            print(f"❌ Results file not found: {target_path}")
+            return 1
+
+        print(f"🌐 Uploading existing results file: {target_path}")
+        ok = runner.upload_existing_file(target_path)
+        return 0 if ok else 1
 
     try:
         # Run benchmarks
@@ -376,6 +506,13 @@ def main():
         
         print(f"Benchmarks: {', '.join(benchmarks_run)}")
         print(f"Output: {filepath}")
+        
+        # Upload results if requested
+        if args.upload:
+            print("\n🌐 Uploading results to server...")
+            upload_success = runner.upload_results(result)
+            if not upload_success:
+                print("⚠️  Benchmark completed but upload failed")
         
         return 0
 
