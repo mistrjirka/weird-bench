@@ -13,6 +13,7 @@ import urllib.request
 from typing import Dict, Any, List, Optional
 
 from .base import BaseBenchmark
+from .vulkaninfo_utils import list_vulkan_gpus, get_vulkaninfo_text, parse_vulkaninfo_text
 
 
 class CompilationToolbox:
@@ -529,23 +530,8 @@ class LlamaBenchmark(BaseBenchmark):
     # ---------- Device detection & selection ----------
 
     def _vulkaninfo_text(self) -> Optional[str]:
-        """Run `vulkaninfo` and return combined text (stdout+stderr). Works headless."""
-        import shutil
-        if not shutil.which("vulkaninfo"):
-            return None
-        try:
-            r = subprocess.run(
-                ["vulkaninfo"],
-                capture_output=True, text=True, timeout=60
-            )
-            # některé verze hází varování na stdout/stderr, tak to sloučíme
-            text = (r.stdout or "") + ("\n" + r.stderr if r.stderr else "")
-            text = text.strip()
-            if not text:
-                return None
-            return text
-        except Exception:
-            return None
+        """Compatibility shim: use shared impl that suppresses stderr noise."""
+        return get_vulkaninfo_text(timeout=60)
     def _parse_vulkaninfo_text(self, text: str) -> List[Dict[str, Any]]:
         """
         Parse text output of `vulkaninfo`:
@@ -556,32 +542,14 @@ class LlamaBenchmark(BaseBenchmark):
         lines = text.splitlines()
         seen_devices = set()  # Track (id, name) pairs to avoid duplicates
 
-        for line in lines:
-            # Look for lines like "GPU id = 0 (NVIDIA GeForce RTX 3090)"
-            match = re.search(r'GPU id\s*=\s*([0-9]+)', line)
-            if match:
-                gpu_id = int(match.group(1))
-                
-                # Extract device name from parentheses - find outermost parentheses
-                p1 = line.find("(")
-                p2 = line.rfind(")")
-                
-                name = f"Vulkan Device {gpu_id}"  # fallback name
-                if p2 > p1 >= 0:
-                    extracted_name = line[p1+1:p2].strip()
-                    if extracted_name:
-                        name = extracted_name
-
-                # Avoid duplicates
-                device_key = (gpu_id, name)
-                if device_key not in seen_devices:
-                    devices.append({
-                        "index": gpu_id,
-                        "name": name,
-                        "driver": self._detect_gpu_driver_from_name(name),
-                        "icd_path": None,
-                    })
-                    seen_devices.add(device_key)
+        # Delegate to shared parser, then ensure indices are ints and names are strings
+        for dev in parse_vulkaninfo_text(text):
+            devices.append({
+                "index": int(dev.get("index", 0)),
+                "name": str(dev.get("name", f"Vulkan Device {dev.get('index', 0)}")),
+                "driver": dev.get("driver", self._detect_gpu_driver_from_name(dev.get("name", ""))),
+                "icd_path": dev.get("icd_path"),
+            })
 
         return devices
 
@@ -601,166 +569,79 @@ class LlamaBenchmark(BaseBenchmark):
         
         return "vulkan"
 
+    # Remove JSON-based detection to avoid unreliable behavior per user request
     def _vulkaninfo_json(self, extra_env: Optional[Dict[str, str]] = None) -> Optional[Dict[str, Any]]:
-        """Run `vulkaninfo --json` and parse; tolerates headless warnings on stdout."""
-        import shutil, json as _json
-        if not shutil.which("vulkaninfo"):
-            return None
-        env = os.environ.copy()
-        if extra_env:
-            env.update(extra_env)
-        try:
-            r = subprocess.run(["vulkaninfo", "--json"], capture_output=True, text=True, env=env, timeout=30)
-            raw = (r.stdout or "")  # některé verze posílají warningy taky na stdout
-            if not raw:
-                return None
-            # odstraň vše před prvním '{'
-            first_brace = raw.find('{')
-            if first_brace == -1:
-                return None
-            cleaned = raw[first_brace:].strip()
-            return _json.loads(cleaned)
-        except Exception:
-            return None
+        return None
 
     def _detect_available_gpus(self) -> List[Dict[str, Any]]:
         """
-        Use llama-bench binary to detect available Vulkan GPUs.
-        This is the modern approach that verifies GPU mapping against actual GGML_VK_VISIBLE_DEVICES indices.
+        Prefer vulkaninfo text parsing for GPU enumeration; fallback to llama-bench parsing.
+        Indices follow the 'GPU id = N' values from vulkaninfo to align selection with user's expectation.
         """
-        # Try to use the built binary first (prefer Vulkan build if available)
-        bench_binary = self._find_bench_binary("vulkan", must_exist=False)
-        if not bench_binary:
-            bench_binary = self._find_bench_binary("cpu", must_exist=False)
-        
+        # 1) Primary: vulkaninfo text parsing (shared util)
+        try:
+            vk_devices = list_vulkan_gpus()
+            if vk_devices:
+                return vk_devices
+        except Exception as e:
+            print(f"⚠️  Vulkaninfo parsing failed: {e}")
+
+        # 2) Fallback: use llama-bench output if available
+        bench_binary = self._find_bench_binary("vulkan", must_exist=False) or self._find_bench_binary("cpu", must_exist=False)
         if not bench_binary:
             print("⚠️  No llama-bench binary found for GPU detection")
-            return []
+            return self._detect_available_gpus_fallback()
 
         try:
-            # Run the binary without arguments to see device enumeration
             result = self.run_command([bench_binary], check=False)
             output = (result.stdout or "") + (result.stderr or "")
-            
             devices = []
-            device_indices_found = set()  # Track found device indices to avoid duplicates
-            lines = output.split('\n')
-            
-            # Parse llama-bench output for Vulkan device information
-            for line in lines:
+            device_indices_found = set()
+            for line in output.split('\n'):
                 line = line.strip()
-                
-                # Look for device enumeration lines like:
-                # "ggml_vulkan: 0 = NVIDIA GeForce RTX 3090 (NVIDIA) | uma: 0 | fp16: 1 | bf16: 1..."
                 if "ggml_vulkan:" in line and " = " in line:
-                    # Parse format: "ggml_vulkan: 0 = NVIDIA GeForce RTX 3090 (NVIDIA) | ..."
                     match = re.search(r'ggml_vulkan:\s*(\d+)\s*=\s*([^|]+)', line)
                     if match:
                         device_index = int(match.group(1))
-                        if device_index not in device_indices_found:
-                            device_info = match.group(2).strip()
-                            
-                            # Extract device name and driver from format "Device Name (Driver)"
-                            # Handle nested parentheses by finding the outermost ones
-                            p1 = device_info.find("(")
-                            p2 = device_info.rfind(")")
-                            
-                            if p2 > p1 >= 0:
-                                # Extract everything before the last parentheses as device name
-                                # and everything inside the last parentheses as driver
-                                potential_name = device_info[:p1].strip()
-                                potential_driver = device_info[p1+1:p2].strip()
-                                
-                                # Check if this looks like a proper driver name vs part of device name
-                                if potential_driver.lower() in ['nvidia', 'amd', 'intel', 'r', 'tm'] or len(potential_driver) < 10:
-                                    device_name = potential_name
-                                    device_driver = self._detect_gpu_driver_from_name(device_name)
-                                else:
-                                    # The parentheses content is likely part of the device name
-                                    device_name = device_info
-                                    device_driver = self._detect_gpu_driver_from_name(device_name)
-                            else:
-                                device_name = device_info
-                                device_driver = self._detect_gpu_driver_from_name(device_name)
-                            
-                            devices.append({
-                                "index": device_index,
-                                "name": device_name,
-                                "driver": device_driver,
-                                "icd_path": None,
-                            })
-                            device_indices_found.add(device_index)
-                
-                # Look for older format device enumeration lines like:
-                # "ggml_vulkan: Device 0: NVIDIA GeForce RTX 3060 Ti"
-                elif "ggml_vulkan:" in line and "Device" in line and ":" in line:
-                    # Try to extract device index and name
-                    match = re.search(r'Device\s+(\d+):\s*(.+)', line)
-                    if match:
-                        device_index = int(match.group(1))
-                        if device_index not in device_indices_found:
-                            device_name = match.group(2).strip()
-                            devices.append({
-                                "index": device_index,
-                                "name": device_name,
-                                "driver": "vulkan",
-                                "icd_path": None,
-                            })
-                            device_indices_found.add(device_index)
-            
-            # If no specific devices were found but we have a device count, create generic entries
-            if not devices:
-                for line in lines:
-                    if "ggml_vulkan:" in line and "Found" in line and "Vulkan devices:" in line:
-                        match = re.search(r'Found\s+(\d+)\s+Vulkan devices:', line)
-                        if match:
-                            device_count = int(match.group(1))
-                            for i in range(device_count):
-                                devices.append({
-                                    "index": i,
-                                    "name": f"Vulkan Device {i}",
-                                    "driver": "vulkan",
-                                    "icd_path": None,
-                                })
-                            break
-            
-            return devices
-            
+                        if device_index in device_indices_found:
+                            continue
+                        info = match.group(2).strip()
+                        p1, p2 = info.find("("), info.rfind(")")
+                        if p2 > p1 >= 0:
+                            name = info[:p1].strip()
+                        else:
+                            name = info
+                        # Skip software renderers just in case
+                        if any(x in name.lower() for x in ["llvmpipe", "lavapipe", "swiftshader", "swrast"]):
+                            continue
+                        devices.append({
+                            "index": device_index,
+                            "name": name,
+                            "driver": self._detect_gpu_driver_from_name(name),
+                            "icd_path": None,
+                        })
+                        device_indices_found.add(device_index)
+            if devices:
+                return devices
         except Exception as e:
             print(f"⚠️  Failed to detect GPUs using llama-bench: {e}")
-            # Fallback to vulkaninfo method as last resort
-            return self._detect_available_gpus_fallback()
+
+        # 3) Last resort: direct vulkaninfo text again
+        return self._detect_available_gpus_fallback()
 
     def _detect_available_gpus_fallback(self) -> List[Dict[str, Any]]:
         """
         Fallback GPU detection using vulkaninfo (older method).
         Index corresponds directly to GGML_VK_VISIBLE_DEVICES.
         """
-        # 1) textový výstup (headless-friendly)
+        # 1) text output (headless-friendly) via shared util
         text = self._vulkaninfo_text()
         if text:
             devices = self._parse_vulkaninfo_text(text)
             if devices:
                 return devices
 
-        # 2) fallback: JSON (po oříznutí preambule)
-        info = self._vulkaninfo_json()
-        if info and "physicalDevices" in info:
-            gpus: List[Dict[str, Any]] = []
-            for idx, dev in enumerate(info["physicalDevices"]):
-                props = dev.get("properties", {})
-                name = props.get("deviceName", f"Vulkan Device {idx}")
-                driver_name = props.get("driverName") or props.get("driverID") or "unknown"
-                gpus.append({
-                    "index": idx,
-                    "name": name,
-                    "driver": str(driver_name),
-                    "icd_path": None,
-                })
-            if gpus:
-                return gpus
-
-        # 3) nic nenalezeno
+        # 2) nothing found
         return []
 
 

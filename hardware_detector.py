@@ -10,6 +10,7 @@ import shutil
 from typing import Dict, List, Optional, Tuple
 import os
 from unified_models import HardwareDevice, generate_hardware_id, normalize_hardware_name
+from benchmarks.vulkaninfo_utils import list_vulkan_gpus, get_vulkaninfo_text, parse_vulkaninfo_text
 
 
 class GlobalHardwareDetector:
@@ -138,73 +139,56 @@ class GlobalHardwareDetector:
             print(f"  🎮 GPU: {gpu_device.name} ({gpu_device.framework or 'Unknown framework'})")
     
     def _detect_gpus_vulkan(self) -> List[Dict[str, str]]:
-        """Detect GPUs using vulkaninfo."""
+        """Detect GPUs using vulkaninfo text output. Ignore software pipes."""
         try:
-            # Try vulkaninfo --json first (more reliable)
-            result = subprocess.run(['vulkaninfo', '--json'], 
-                                  capture_output=True, text=True, timeout=30)
-            if result.returncode == 0:
-                return self._parse_vulkaninfo_json(result.stdout)
-            
-            # Fallback to text mode
-            result = subprocess.run(['vulkaninfo'], 
-                                  capture_output=True, text=True, timeout=30)
-            if result.returncode == 0:
-                return self._parse_vulkaninfo_text(result.stdout)
-                
+            text = get_vulkaninfo_text(timeout=30)
+            if not text:
+                return []
+            devices = parse_vulkaninfo_text(text)
+            gpus = []
+            for dev in devices:
+                name = dev.get('name', '')
+                # Map driver to manufacturer naming used elsewhere
+                driver = (dev.get('driver') or '').lower()
+                if driver == 'nvidia':
+                    manufacturer = 'NVIDIA'
+                elif driver == 'amd':
+                    manufacturer = 'AMD'
+                elif driver == 'intel':
+                    manufacturer = 'Intel'
+                else:
+                    manufacturer = self._detect_gpu_manufacturer(name)
+
+                gpus.append({
+                    'name': name,
+                    'manufacturer': manufacturer,
+                    'framework': 'VULKAN'
+                })
+            return gpus
         except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
             print(f"  ⚠️  Vulkan detection failed: {e}")
-        
-        return []
-    
-    def _parse_vulkaninfo_json(self, json_output: str) -> List[Dict[str, str]]:
-        """Parse vulkaninfo JSON output."""
-        try:
-            data = json.loads(json_output)
-            gpus = []
-            
-            # Look for GPU devices in VkInstance
-            if 'VkInstance' in data and 'VkPhysicalDevice' in data['VkInstance']:
-                for device in data['VkInstance']['VkPhysicalDevice']:
-                    props = device.get('VkPhysicalDeviceProperties', {})
-                    device_name = props.get('deviceName', 'Unknown GPU')
-                    device_type = props.get('deviceType', 0)
-                    
-                    # Only include discrete or integrated GPUs (not software renderers)
-                    if device_type in [1, 2]:  # VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU, VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
-                        manufacturer = self._detect_gpu_manufacturer(device_name)
-                        gpus.append({
-                            'name': device_name,
-                            'manufacturer': manufacturer,
-                            'framework': 'VULKAN'
-                        })
-            
-            return gpus
-            
-        except (json.JSONDecodeError, KeyError) as e:
-            print(f"  ⚠️  Failed to parse vulkaninfo JSON: {e}")
             return []
     
+    # Remove JSON parsing path; rely on text method only per reliability concerns
+    def _parse_vulkaninfo_json(self, json_output: str) -> List[Dict[str, str]]:
+        return []
+    
     def _parse_vulkaninfo_text(self, text_output: str) -> List[Dict[str, str]]:
-        """Parse vulkaninfo text output."""
+        """Compat shim around shared parser; kept for backward use within this class."""
+        devices = parse_vulkaninfo_text(text_output)
         gpus = []
-        current_device = None
-        
-        for line in text_output.split('\n'):
-            line = line.strip()
-            
-            if 'GPU id' in line and 'deviceName' in line:
-                # Extract device name from line like: "GPU id : 0 (NVIDIA GeForce RTX 3090):"
-                match = re.search(r'\((.*?)\)', line)
-                if match:
-                    device_name = match.group(1).strip()
-                    manufacturer = self._detect_gpu_manufacturer(device_name)
-                    gpus.append({
-                        'name': device_name,
-                        'manufacturer': manufacturer,
-                        'framework': 'VULKAN'
-                    })
-        
+        for dev in devices:
+            name = dev.get('name', '')
+            driver = (dev.get('driver') or '').lower()
+            if driver == 'nvidia':
+                manufacturer = 'NVIDIA'
+            elif driver == 'amd':
+                manufacturer = 'AMD'
+            elif driver == 'intel':
+                manufacturer = 'Intel'
+            else:
+                manufacturer = self._detect_gpu_manufacturer(name)
+            gpus.append({'name': name, 'manufacturer': manufacturer, 'framework': 'VULKAN'})
         return gpus
     
     def _detect_gpus_nvidia(self) -> List[Dict[str, str]]:
