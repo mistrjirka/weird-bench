@@ -817,11 +817,15 @@ class LlamaBenchmark(BaseBenchmark):
 
     def benchmark(self, args: Any = None) -> Dict[str, Any]:
         vulkan_supported = self.results["build"].get("vulkan_supported", False)
+        
+        # Check if running in CPU-only mode
+        no_gpu = args and getattr(args, 'no_gpu', False)
 
         results = {
             "runs_cpu": [],
             "runs_gpu": [],
-            "device_runs": []  # New format: separate results per device
+            "device_runs": [],  # New format: separate results per device
+            "cpu_only_mode": no_gpu  # Flag to indicate intentional CPU-only run
         }
 
         # Store GPU selection info for debugging
@@ -858,7 +862,6 @@ class LlamaBenchmark(BaseBenchmark):
             results["cpu_skip_reason"] = "cpu_build_failed"
 
         # GPU
-        no_gpu = args and getattr(args, 'no_gpu', False)
         if no_gpu:
             print(f"\n⏭️  Skipping GPU benchmarks (--no-gpu)")
             results["gpu_skip_reason"] = "no_gpu_flag_set"
@@ -869,6 +872,18 @@ class LlamaBenchmark(BaseBenchmark):
             print(f"\n=== Skipping GPU benchmarks ({reason.replace('_', ' ')}) ===")
             results["gpu_skip_reason"] = reason
             return results
+
+        # Check if any GPUs are available
+        if not self.available_gpus:
+            print("❌ No GPUs detected for Vulkan benchmarking!")
+            print("💡 GPU detection failed. This might indicate:")
+            print("   - Missing or faulty GPU drivers")
+            print("   - No compatible GPU hardware")
+            print("   - Vulkan runtime issues")
+            print("   - Use --no-gpu flag for CPU-only benchmarking")
+            results["gpu_skip_reason"] = "no_gpus_detected"
+            # Don't return here - this should be an error unless CPU-only mode
+            raise RuntimeError("No GPUs detected for Vulkan benchmarking (use --no-gpu for CPU-only mode)")
 
         print("\n=== Running GPU benchmarks (using Vulkan build) ===")
         gpu_binary = self.results["build"]["vulkan_bench_binary"]
@@ -883,7 +898,7 @@ class LlamaBenchmark(BaseBenchmark):
             gpus_to_test = self.available_gpus
 
         if not gpus_to_test:
-            print("⚠️  No GPUs available for testing")
+            print("⚠️  No GPUs available for testing after filtering")
             results["gpu_skip_reason"] = "no_gpus_available"
             return results
 

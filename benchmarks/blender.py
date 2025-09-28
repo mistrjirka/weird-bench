@@ -357,9 +357,13 @@ class BlenderBenchmark(BaseBenchmark):
     
     def benchmark(self, args: Any = None) -> Dict[str, Any]:
         """Run Blender benchmarks on all available devices."""
+        # Check if running in CPU-only mode
+        cpu_only_mode = args and getattr(args, 'no_gpu', False)
+        
         results = {
             "device_runs": [],
-            "scenes_tested": ["monster", "junkshop", "classroom"]
+            "scenes_tested": ["monster", "junkshop", "classroom"],
+            "cpu_only_mode": cpu_only_mode  # Flag to indicate intentional CPU-only run
         }
         
         # First, download Blender if needed
@@ -377,13 +381,39 @@ class BlenderBenchmark(BaseBenchmark):
             return {
                 "device_runs": [],
                 "error": "No devices detected",
-                "success": False
+                "success": False,
+                "cpu_only_mode": cpu_only_mode
+            }
+
+        # Check if any GPUs were detected
+        gpu_devices = [device for device in devices if device["framework"].upper() != "CPU"]
+        cpu_devices = [device for device in devices if device["framework"].upper() == "CPU"]
+        
+        print(f"🔍 Device detection: {len(cpu_devices)} CPU device(s), {len(gpu_devices)} GPU device(s)")
+        
+        # If no GPUs detected and not in CPU-only mode, this is an error
+        if not gpu_devices and not cpu_only_mode:
+            error_msg = (
+                f"❌ GPU benchmark failure: No GPU devices detected by Blender, but --no-gpu flag not specified.\n"
+                f"   Detected devices: {[d['name'] for d in cpu_devices]}\n"
+                f"   GPU detection failed - this indicates GPU driver issues or no GPU hardware.\n"
+                f"   Run with --no-gpu flag for CPU-only benchmarking."
+            )
+            print(error_msg)
+            return {
+                "device_runs": [],
+                "error": "GPU detection failed - no GPU devices found",
+                "message": "No GPU devices detected but CPU-only mode not enabled",
+                "detected_devices": cpu_devices,
+                "suggestion": "Run with --no-gpu flag for CPU-only benchmarking",
+                "success": False,
+                "cpu_only_mode": cpu_only_mode
             }
         
         # Filter devices if --no-gpu is specified
-        if args and getattr(args, 'no_gpu', False):
+        if cpu_only_mode:
             original_count = len(devices)
-            devices = [device for device in devices if device["framework"].upper() == "CPU"]
+            devices = cpu_devices
             print(f"🖥️  CPU-only mode: filtered {original_count} devices to {len(devices)} CPU device(s)")
             
             if not devices:
@@ -391,7 +421,8 @@ class BlenderBenchmark(BaseBenchmark):
                 return {
                     "device_runs": [],
                     "error": "No CPU devices detected",
-                    "success": False
+                    "success": False,
+                    "cpu_only_mode": cpu_only_mode
                 }
         
         print(f"🎯 Found {len(devices)} devices to benchmark")
