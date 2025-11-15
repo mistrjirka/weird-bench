@@ -6,6 +6,7 @@ and optional build skipping for fast debugging.
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import time
@@ -720,21 +721,15 @@ class LlamaBenchmark(BaseBenchmark):
         if numactl_cmd:
             print(f"Using custom numactl command: {numactl_cmd}")
         elif numa_distribute:
-            print("NUMA distribute mode enabled (numactl --interleave=all)")
+            print("NUMA distribute mode enabled (--numa distribute)")
         elif numa_isolate:
-            print("NUMA isolate mode enabled")
+            print("NUMA isolate mode enabled (--numa isolate)")
 
     def _build_numa_command_prefix(self) -> List[str]:
-        """Build the numactl command prefix based on NUMA settings."""
+        """Build the numactl command prefix when a custom command is provided."""
         if self.numactl_cmd:
             # Parse custom numactl command
-            return self.numactl_cmd.split()
-        elif self.numa_distribute:
-            return ["numactl", "--interleave=all"]
-        elif self.numa_isolate:
-            # For isolate mode, could use specific node binding
-            # This is a placeholder - adjust based on your needs
-            return ["numactl", "--cpunodebind=0", "--membind=0"]
+            return shlex.split(self.numactl_cmd)
         return []
 
 
@@ -782,7 +777,7 @@ class LlamaBenchmark(BaseBenchmark):
                 for p_size in prompt_sizes:
                     for g_size in cpu_generation_sizes:
                         print(f"Running CPU benchmark: prompt={p_size}, generation={g_size}")
-                        cmd = [cpu_binary, "-m", self.project_model_path, "-p", str(p_size), "-n", str(g_size), "--numa", "numactl"]
+                        cmd = [cpu_binary, "-m", self.project_model_path, "-p", str(p_size), "-n", str(g_size)]
                         result = self._run_benchmark_command(cmd, "cpu", p_size, g_size, 0)
                         results["runs_cpu"].append(result)
             except Exception as e:
@@ -906,24 +901,20 @@ class LlamaBenchmark(BaseBenchmark):
                                gpu_env: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         start_time = time.perf_counter()
         
+        base_cmd = [cmd[0]] + ["-o", "json"] + cmd[1:]
+
+        if self.numa_distribute:
+            base_cmd += ["--numa", "distribute"]
+        elif self.numa_isolate:
+            base_cmd += ["--numa", "isolate"]
+
         # Build NUMA command prefix if configured
         numa_prefix = self._build_numa_command_prefix()
-        
-        # Construct the full command with NUMA prefix if present
         if numa_prefix:
-            # Add --numa distribute/isolate flag to llama-bench if using numactl
-            base_cmd = numa_prefix + [cmd[0]] + ["-o", "json"] + cmd[1:]
-            # Add --numa flag with appropriate mode
-            if self.numa_distribute:
-                base_cmd.append("--numa")
-                base_cmd.append("distribute")
-            elif self.numa_isolate:
-                base_cmd.append("--numa")
-                base_cmd.append("isolate")
-            json_cmd = base_cmd
-            print(f"NUMA command: {' '.join(numa_prefix)}")
+            json_cmd = numa_prefix + base_cmd
+            print(f"NUMA command prefix: {' '.join(numa_prefix)}")
         else:
-            json_cmd = [cmd[0]] + ["-o", "json"] + cmd[1:]
+            json_cmd = base_cmd
 
         try:
             print(f"Running {run_type} benchmark: prompt={prompt_size}, gen={generation_size}, ngl={ngl}")
