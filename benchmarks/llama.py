@@ -14,6 +14,7 @@ from typing import Dict, Any, List, Optional
 
 from .base import BaseBenchmark
 from .vulkaninfo_utils import list_vulkan_gpus, get_vulkaninfo_text, parse_vulkaninfo_text
+from .console import red, green, grey
 
 
 class CompilationToolbox:
@@ -159,6 +160,11 @@ class LlamaBenchmark(BaseBenchmark):
         self.gpu_device_index: Optional[int] = None
         self.vk_driver_files: Optional[str] = None
         self.available_gpus: List[Dict[str, Any]] = []
+
+        # NUMA configuration
+        self.numa_distribute: bool = False
+        self.numa_isolate: bool = False
+        self.numactl_cmd: Optional[str] = None
 
         import uuid
         self.build_id = str(uuid.uuid4())[:8]
@@ -367,9 +373,7 @@ class LlamaBenchmark(BaseBenchmark):
             missing_vulkan = (not getattr(args, "no_gpu", False)) and ("vulkan_bench_binary" not in build_results)
             if missing_cpu or missing_vulkan:
                 # Print a red warning to clearly indicate compilation is needed
-                red = "\033[31m"
-                reset = "\033[0m"
-                print(red + "One or more requested benchmark binaries are missing; switching to build mode to compile them." + reset)
+                print(red("One or more requested benchmark binaries are missing; switching to build mode to compile them."))
                 # fall through into the normal build path below
             else:
                 # All good: return detected binaries
@@ -389,9 +393,9 @@ class LlamaBenchmark(BaseBenchmark):
             build_results["cpu_build_timing"] = cpu_timing
             cpu_binary = self._find_bench_binary("cpu")
             build_results["cpu_bench_binary"] = cpu_binary
-            print(f"CPU build successful: {cpu_binary}")
+            print(green(f"CPU build successful: {cpu_binary}"))
         except Exception as e:
-            print(f"CPU build failed: {e}")
+            print(red(f"CPU build failed: {e}"))
             build_results["cpu_build_error"] = str(e)
 
         # Vulkan build
@@ -401,7 +405,7 @@ class LlamaBenchmark(BaseBenchmark):
             vulkan_binary = self._find_bench_binary("vulkan")
             build_results["vulkan_bench_binary"] = vulkan_binary
             build_results["gpu_bench_binary"] = vulkan_binary
-            print(f"Vulkan build successful: {vulkan_binary}")
+            print(green(f"Vulkan build successful: {vulkan_binary}"))
 
             vulkan_devices = self._check_vulkan_devices(vulkan_binary)
             build_results["vulkan_devices"] = vulkan_devices
@@ -417,7 +421,7 @@ class LlamaBenchmark(BaseBenchmark):
             else:
                 print("No Vulkan GPUs detected using llama-bench binary")
         except Exception as e:
-            print(f"Vulkan build failed: {e}")
+            print(red(f"Vulkan build failed: {e}"))
             build_results["vulkan_build_error"] = str(e)
 
         if not any(key.endswith("_bench_binary") for key in build_results.keys()):
@@ -429,26 +433,26 @@ class LlamaBenchmark(BaseBenchmark):
         import multiprocessing
         num_jobs = min(multiprocessing.cpu_count(), 20)
 
-        print("⚙️  Configuring CPU build...")
+        print("Configuring CPU build...")
         config_start = time.perf_counter()
         config_cmd = [
             "cmake", "-B", "build_cpu", "-DCMAKE_BUILD_TYPE=Release",
             f"-DCMAKE_C_FLAGS=-DWEIRD_BENCH_BUILD_ID={self.build_id}",
             f"-DCMAKE_CXX_FLAGS=-DWEIRD_BENCH_BUILD_ID={self.build_id}"
         ]
-        print(f"🔧 Command: {' '.join(config_cmd)}")
+        print(f"Command: {' '.join(config_cmd)}")
         config_result = subprocess.run(config_cmd, cwd=self.project_dir, text=True, env=self._get_cold_build_env())
         config_time = time.perf_counter() - config_start
 
         if config_result.returncode != 0:
             raise subprocess.CalledProcessError(config_result.returncode, config_cmd)
 
-        print(f"✅ CPU configuration completed in {config_time:.2f}s")
+        print(f"CPU configuration completed in {config_time:.2f}s")
 
-        print(f"⚙️  Building CPU version (using {num_jobs} jobs)...")
+        print(f"Building CPU version (using {num_jobs} jobs)...")
         build_start = time.perf_counter()
         build_cmd = ["cmake", "--build", "build_cpu", "--config", "Release", "--", f"-j{num_jobs}"]
-        print(f"🔧 Command: {' '.join(build_cmd)}")
+        print(f"Command: {' '.join(build_cmd)}")
 
         process = subprocess.Popen(
             build_cmd,
@@ -471,7 +475,7 @@ class LlamaBenchmark(BaseBenchmark):
                 line_count += 1
                 if (line_count % 10 == 0 or
                     any(keyword in line for keyword in ["Built target", "Linking", "error:", "Error", "llama-bench", "%"])):
-                    print(f"📈 {line}")
+                    print(line)
 
         process.wait()
         build_time = time.perf_counter() - build_start
@@ -480,7 +484,7 @@ class LlamaBenchmark(BaseBenchmark):
             raise subprocess.CalledProcessError(process.returncode, build_cmd)
 
         total_time = config_time + build_time
-        print(f"✅ CPU build completed in {total_time:.2f}s (config: {config_time:.2f}s, build: {build_time:.2f}s)")
+        print(f"CPU build completed in {total_time:.2f}s (config: {config_time:.2f}s, build: {build_time:.2f}s)")
 
         return {
             "config_time_seconds": config_time,
@@ -492,23 +496,23 @@ class LlamaBenchmark(BaseBenchmark):
         import multiprocessing
         num_jobs = min(multiprocessing.cpu_count(), 20)
 
-        print("⚙️  Configuring Vulkan build...")
+        print("Configuring Vulkan build...")
         config_cmd = [
             "cmake", "-B", "build_vulkan", "-DGGML_VULKAN=ON", "-DCMAKE_BUILD_TYPE=Release",
             f"-DCMAKE_C_FLAGS=-DWEIRD_BENCH_BUILD_ID={self.build_id}",
             f"-DCMAKE_CXX_FLAGS=-DWEIRD_BENCH_BUILD_ID={self.build_id}"
         ]
-        print(f"🔧 Command: {' '.join(config_cmd)}")
+        print(f"Command: {' '.join(config_cmd)}")
         config_result = subprocess.run(config_cmd, cwd=self.project_dir, text=True, env=self._get_cold_build_env())
 
         if config_result.returncode != 0:
             raise subprocess.CalledProcessError(config_result.returncode, config_cmd)
 
-        print("✅ Vulkan configuration completed")
+        print("Vulkan configuration completed")
 
-        print(f"⚙️  Building Vulkan version (using {num_jobs} jobs)...")
+        print(f"Building Vulkan version (using {num_jobs} jobs)...")
         build_cmd = ["cmake", "--build", "build_vulkan", "--config", "Release", "--", f"-j{num_jobs}"]
-        print(f"🔧 Command: {' '.join(build_cmd)}")
+        print(f"Command: {' '.join(build_cmd)}")
 
         process = subprocess.Popen(
             build_cmd,
@@ -531,14 +535,14 @@ class LlamaBenchmark(BaseBenchmark):
                 line_count += 1
                 if (line_count % 10 == 0 or
                     any(keyword in line for keyword in ["Built target", "Linking", "error:", "Error", "llama-bench", "%"])):
-                    print(f"📈 {line}")
+                    print(line)
 
         process.wait()
 
         if process.returncode != 0:
             raise subprocess.CalledProcessError(process.returncode, build_cmd)
 
-        print("✅ Vulkan build completed")
+        print("Vulkan build completed")
 
     # ---------- Device detection & selection ----------
 
@@ -597,12 +601,12 @@ class LlamaBenchmark(BaseBenchmark):
             if vk_devices:
                 return vk_devices
         except Exception as e:
-            print(f"⚠️  Vulkaninfo parsing failed: {e}")
+            print(f"Vulkaninfo parsing failed: {e}")
 
         # 2) Fallback: use llama-bench output if available
         bench_binary = self._find_bench_binary("vulkan", must_exist=False) or self._find_bench_binary("cpu", must_exist=False)
         if not bench_binary:
-            print("⚠️  No llama-bench binary found for GPU detection")
+            print("No llama-bench binary found for GPU detection")
             return self._detect_available_gpus_fallback()
 
         try:
@@ -637,7 +641,7 @@ class LlamaBenchmark(BaseBenchmark):
             if devices:
                 return devices
         except Exception as e:
-            print(f"⚠️  Failed to detect GPUs using llama-bench: {e}")
+            print(f"Failed to detect GPUs using llama-bench: {e}")
 
         # 3) Last resort: direct vulkaninfo text again
         return self._detect_available_gpus_fallback()
@@ -680,25 +684,58 @@ class LlamaBenchmark(BaseBenchmark):
         self.vk_driver_files = vk_driver_files
 
         if gpu_device_index is not None:
-            print(f"🎯 Selected GPU device index: {gpu_device_index}")
+            print(f"Selected GPU device index: {gpu_device_index}")
             if self.available_gpus:
                 matching = [g for g in self.available_gpus if g['index'] == gpu_device_index]
                 if matching:
                     g = matching[0]
-                    print(f"   📋 GPU details: {g['name']} (Driver: {g.get('driver','unknown')})")
+                    print(f"   GPU details: {g['name']} (Driver: {g.get('driver','unknown')})")
                 else:
-                    print(f"   ⚠️  Warning: No GPU found with index {gpu_device_index}")
+                    print(f"   Warning: No GPU found with index {gpu_device_index}")
 
         if vk_driver_files:
-            print(f"🔧 Forcing Vulkan driver: {vk_driver_files}")
+            print(f"Forcing Vulkan driver: {vk_driver_files}")
             if not os.path.exists(vk_driver_files):
-                print(f"   ⚠️  Warning: ICD file not found: {vk_driver_files}")
+                print(f"   Warning: ICD file not found: {vk_driver_files}")
 
     def _get_gpu_env_vars(self) -> Dict[str, str]:
         env: Dict[str, str] = {}
         if self.gpu_device_index is not None:
             env['GGML_VK_VISIBLE_DEVICES'] = str(self.gpu_device_index)
         return env
+
+    def set_numa_options(self, numa_distribute: bool = False, numa_isolate: bool = False, numactl_cmd: Optional[str] = None) -> None:
+        """
+        Configure NUMA options for llama benchmark execution.
+        
+        Args:
+            numa_distribute: Use numactl --interleave=all for memory distribution
+            numa_isolate: Use NUMA isolate mode
+            numactl_cmd: Custom numactl command prefix (overrides other options)
+        """
+        self.numa_distribute = numa_distribute
+        self.numa_isolate = numa_isolate
+        self.numactl_cmd = numactl_cmd
+        
+        if numactl_cmd:
+            print(f"Using custom numactl command: {numactl_cmd}")
+        elif numa_distribute:
+            print("NUMA distribute mode enabled (numactl --interleave=all)")
+        elif numa_isolate:
+            print("NUMA isolate mode enabled")
+
+    def _build_numa_command_prefix(self) -> List[str]:
+        """Build the numactl command prefix based on NUMA settings."""
+        if self.numactl_cmd:
+            # Parse custom numactl command
+            return self.numactl_cmd.split()
+        elif self.numa_distribute:
+            return ["numactl", "--interleave=all"]
+        elif self.numa_isolate:
+            # For isolate mode, could use specific node binding
+            # This is a placeholder - adjust based on your needs
+            return ["numactl", "--cpunodebind=0", "--membind=0"]
+        return []
 
 
     # ---------- Running ----------
@@ -749,7 +786,7 @@ class LlamaBenchmark(BaseBenchmark):
                         result = self._run_benchmark_command(cmd, "cpu", p_size, g_size, 0)
                         results["runs_cpu"].append(result)
             except Exception as e:
-                print(f"❌ Failed CPU benchmarking: {e}")
+                print(f"Failed CPU benchmarking: {e}")
                 results["cpu_skip_reason"] = "cpu_benchmark_failed"
         else:
             print("\n=== Skipping CPU benchmarks (CPU build failed or missing) ===")
@@ -757,7 +794,7 @@ class LlamaBenchmark(BaseBenchmark):
 
         # GPU
         if no_gpu:
-            print(f"\n⏭️  Skipping GPU benchmarks (--no-gpu)")
+            print(f"\nSkipping GPU benchmarks (--no-gpu)")
             results["gpu_skip_reason"] = "no_gpu_flag_set"
             return results
 
@@ -769,8 +806,8 @@ class LlamaBenchmark(BaseBenchmark):
 
         # Check if any GPUs are available
         if not self.available_gpus:
-            print("❌ No GPUs detected for Vulkan benchmarking!")
-            print("💡 GPU detection failed. This might indicate:")
+            print("No GPUs detected for Vulkan benchmarking!")
+            print("GPU detection failed. This might indicate:")
             print("   - Missing or faulty GPU drivers")
             print("   - No compatible GPU hardware")
             print("   - Vulkan runtime issues")
@@ -786,20 +823,20 @@ class LlamaBenchmark(BaseBenchmark):
         if self.gpu_device_index is not None:
             gpus_to_test = [g for g in self.available_gpus if g['index'] == self.gpu_device_index]
             if not gpus_to_test and self.available_gpus:
-                print(f"⚠️  Selected GPU index {self.gpu_device_index} not found. Falling back to device 0.")
+                print(f"Selected GPU index {self.gpu_device_index} not found. Falling back to device 0.")
                 gpus_to_test = [self.available_gpus[0]]
         else:
             gpus_to_test = self.available_gpus
 
         if not gpus_to_test:
-            print("⚠️  No GPUs available for testing after filtering")
+            print("No GPUs available for testing after filtering")
             results["gpu_skip_reason"] = "no_gpus_available"
             return results
 
-        print(f"🎯 Testing {len(gpus_to_test)} GPU(s): {[gpu['name'] for gpu in gpus_to_test]}")
+        print(f"Testing {len(gpus_to_test)} GPU(s): {[gpu['name'] for gpu in gpus_to_test]}")
 
         for gpu_device in gpus_to_test:
-            print(f"\n🔄 Testing GPU: {gpu_device['name']} (Index: {gpu_device['index']})")
+            print(f"\nTesting GPU: {gpu_device['name']} (Index: {gpu_device['index']})")
             # Only set GGML_VK_VISIBLE_DEVICES per device; do not force driver unless user asked
             self.set_gpu_selection(gpu_device['index'], self.vk_driver_files if self.vk_driver_files else None)
 
@@ -820,7 +857,7 @@ class LlamaBenchmark(BaseBenchmark):
                         cmd = [gpu_binary, "-m", self.project_model_path, "-p", str(p_size), "-n", str(g_size), "-sm", "none", "-mg", "0"]
                         gpu_env = self._get_gpu_env_vars()
                         if gpu_env:
-                            print(f"🎯 GPU selection: {gpu_env}")
+                            print(f"GPU selection: {gpu_env}")
                         result = self._run_benchmark_command(cmd, "gpu", p_size, g_size, 99, gpu_env)
                         
                         # Simplify result - remove verbose raw_json, keep only essential data
@@ -850,10 +887,10 @@ class LlamaBenchmark(BaseBenchmark):
                         results["runs_gpu"].append(legacy_result)
                         
                 results["device_runs"].append(device_result)
-                print(f"✅ Completed testing GPU: {gpu_device['name']}")
+                print(f"Completed testing GPU: {gpu_device['name']}")
                 
             except Exception as e:
-                print(f"❌ Failed testing GPU {gpu_device['name']}: {e}")
+                print(f"Failed testing GPU {gpu_device['name']}: {e}")
                 device_result["success"] = False
                 device_result["error"] = str(e)
                 results["device_runs"].append(device_result)
@@ -868,20 +905,38 @@ class LlamaBenchmark(BaseBenchmark):
                                prompt_size: int, generation_size: int, ngl: int,
                                gpu_env: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         start_time = time.perf_counter()
-        json_cmd = [cmd[0]] + ["-o", "json"] + cmd[1:]
+        
+        # Build NUMA command prefix if configured
+        numa_prefix = self._build_numa_command_prefix()
+        
+        # Construct the full command with NUMA prefix if present
+        if numa_prefix:
+            # Add --numa distribute/isolate flag to llama-bench if using numactl
+            base_cmd = numa_prefix + [cmd[0]] + ["-o", "json"] + cmd[1:]
+            # Add --numa flag with appropriate mode
+            if self.numa_distribute:
+                base_cmd.append("--numa")
+                base_cmd.append("distribute")
+            elif self.numa_isolate:
+                base_cmd.append("--numa")
+                base_cmd.append("isolate")
+            json_cmd = base_cmd
+            print(f"NUMA command: {' '.join(numa_prefix)}")
+        else:
+            json_cmd = [cmd[0]] + ["-o", "json"] + cmd[1:]
 
         try:
-            print(f"🏃 Running {run_type} benchmark: prompt={prompt_size}, gen={generation_size}, ngl={ngl}")
+            print(f"Running {run_type} benchmark: prompt={prompt_size}, gen={generation_size}, ngl={ngl}")
             env = os.environ.copy()
             if gpu_env:
                 env.update(gpu_env)
-                print(f"🎯 Using GPU environment: {gpu_env}")
+                print(f"Using GPU environment: {gpu_env}")
 
             result = self.run_command_with_env(json_cmd, env, cwd=self.project_dir, check=False)
             elapsed_time = time.perf_counter() - start_time
 
             if result.returncode != 0:
-                print(f"❌ Benchmark failed: {result.stderr}")
+                print(f"Benchmark failed: {result.stderr}")
                 return {
                     "type": run_type, "prompt_size": prompt_size, "generation_size": generation_size,
                     "ngl": ngl, "returncode": result.returncode, "elapsed_seconds": elapsed_time,
@@ -909,7 +964,7 @@ class LlamaBenchmark(BaseBenchmark):
                     "metrics": metrics, "essential_info": essential_raw_info,
                 }
             except json.JSONDecodeError as e:
-                print(f"⚠️  Failed to parse JSON output, falling back to text parsing: {e}")
+                print(f"Failed to parse JSON output, falling back to text parsing: {e}")
                 metrics = self._parse_llama_bench_output(result.stdout or "")
                 return {
                     "type": run_type, "prompt_size": prompt_size, "generation_size": generation_size,
@@ -919,7 +974,7 @@ class LlamaBenchmark(BaseBenchmark):
 
         except Exception as e:
             elapsed_time = time.perf_counter() - start_time
-            print(f"❌ Exception during benchmark: {e}")
+            print(f"Exception during benchmark: {e}")
             return {
                 "type": run_type, "prompt_size": prompt_size, "generation_size": generation_size,
                 "ngl": ngl, "returncode": -1, "elapsed_seconds": elapsed_time,

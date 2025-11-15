@@ -26,6 +26,7 @@ from benchmarks.reversan import ReversanBenchmark
 from benchmarks.llama import LlamaBenchmark  
 from benchmarks.sevenzip import SevenZipBenchmark
 from benchmarks.blender import BlenderBenchmark
+from benchmarks.console import red, green, grey
 
 
 class UnifiedBenchmarkRunner:
@@ -43,9 +44,9 @@ class UnifiedBenchmarkRunner:
         # Check for GNU time (required for detailed benchmarking)
         self.gnu_time = self._find_gnu_time()
         if not self.gnu_time:
-            print("⚠️  GNU time utility not found: detailed process metrics will be null for benchmarks that rely on it.")
+            print(grey("GNU time utility not found: detailed process metrics will be null for benchmarks that rely on it."))
         else:
-            print(f"ℹ️  GNU time detected at: {self.gnu_time}")
+            print(grey(f"GNU time detected at: {self.gnu_time}"))
 
     def _find_gnu_time(self) -> Optional[str]:
         """Find a usable 'time' utility. On many distros (incl. Arch), /usr/bin/time is GNU time by default."""
@@ -74,7 +75,7 @@ class UnifiedBenchmarkRunner:
         if not self.system_info:
             raise RuntimeError("Hardware detection must be run first. Call detect_hardware().")
         
-        print(f"\n🚀 Running {benchmark_name} benchmark...")
+        print(grey(f"\nRunning {benchmark_name} benchmark..."))
         
         if benchmark_name == "reversan":
             return self._run_reversan_benchmark(args)
@@ -131,7 +132,16 @@ class UnifiedBenchmarkRunner:
         if hasattr(args, 'vk_driver') and args.vk_driver:
             benchmark.set_gpu_selection(vk_driver_files=args.vk_driver)
         
-        build_result = benchmark.build()
+        # Set NUMA options if specified
+        if hasattr(args, 'numa_distribute') or hasattr(args, 'numa_isolate') or hasattr(args, 'numactl'):
+            benchmark.set_numa_options(
+                numa_distribute=getattr(args, 'numa_distribute', False),
+                numa_isolate=getattr(args, 'numa_isolate', False),
+                numactl_cmd=getattr(args, 'numactl', None)
+            )
+        
+        # Pass args so the benchmark can honor flags like --skip-build and --no-gpu
+        build_result = benchmark.build(args)
         
         # Run benchmarks
         cpu_benchmark = None
@@ -293,15 +303,15 @@ class UnifiedBenchmarkRunner:
                 result = self.run_benchmark(benchmark_name, args)
                 setattr(unified_result, benchmark_name, result)
                 
-                print(f"✅ {benchmark_name} benchmark completed successfully")
+                print(green(f"{benchmark_name} benchmark completed successfully"))
                 
             except Exception as e:
-                print(f"❌ {benchmark_name} benchmark failed: {e}")
+                print(red(f"{benchmark_name} benchmark failed: {e}"))
                 # Continue with other benchmarks
                 continue
         
         elapsed_time = time.time() - start_time
-        print(f"\n🎉 All benchmarks completed in {elapsed_time:.1f} seconds")
+        print(grey(f"\nAll benchmarks completed in {elapsed_time:.1f} seconds"))
         
         return unified_result
 
@@ -442,6 +452,16 @@ def main():
     
     parser.add_argument("--list-gpus", action="store_true",
                         help="List available Vulkan GPU devices and exit")
+
+    # NUMA options for llama benchmark
+    parser.add_argument("--numa-distribute", action="store_true",
+                        help="Use NUMA distribute mode (numactl --interleave=all) for llama benchmark")
+    
+    parser.add_argument("--numa-isolate", action="store_true",
+                        help="Use NUMA isolate mode for llama benchmark")
+    
+    parser.add_argument("--numactl",
+                        help="Custom numactl command prefix for llama benchmark (e.g., 'numactl --interleave=all')")
 
     parser.add_argument("--api-url", default="https://weirdbench.eu/api",
                         help="API URL for result uploads")
