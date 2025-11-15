@@ -927,6 +927,10 @@ class LlamaBenchmark(BaseBenchmark):
 
         try:
             print(f"Running {run_type} benchmark: prompt={prompt_size}, gen={generation_size}, ngl={ngl}")
+            
+            # Print the exact command being executed
+            print(grey(f"Command: {' '.join(json_cmd)}"))
+            
             env = os.environ.copy()
             if gpu_env:
                 env.update(gpu_env)
