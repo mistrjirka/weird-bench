@@ -119,6 +119,7 @@ class UnifiedBenchmarkRunner:
             thread_benchmarks=[ReversanThreadResult(**t) for t in thread_benchmarks]
         )
 
+    
     def _run_llama_benchmark(self, args: Any = None) -> LlamaBenchmarkResult:
         """Run Llama benchmark with unified output."""
         benchmark = LlamaBenchmark(self.output_dir)
@@ -527,6 +528,80 @@ def main():
         
         print(f"Benchmarks: {', '.join(benchmarks_run)}")
         print(f"Output: {filepath}")
+        
+        # Print detailed results
+        print(f"\n{'='*60}")
+        print("📈 DETAILED RESULTS")
+        print(f"{'='*60}")
+        
+        # Reversan Results
+        if result.reversan:
+            print("\n🔄 REVERSAN")
+            print(f"  Compile Time: {result.reversan.compile_time:.2f}s")
+            
+            if result.reversan.depth_benchmarks:
+                print("\n  Depth Benchmarks:")
+                for db in result.reversan.depth_benchmarks:
+                    print(f"    Depth {db.depth}: {db.time_seconds:.2f}s, {db.memory_kb/1024:.1f}MB")
+            
+            if result.reversan.thread_benchmarks:
+                print("\n  Thread Benchmarks:")
+                for tb in result.reversan.thread_benchmarks:
+                    print(f"    {tb.threads} threads: {tb.time_seconds:.2f}s, {tb.memory_kb/1024:.1f}MB")
+        
+        # Llama Results
+        if result.llama:
+            print("\n🦙 LLAMA")
+            print(f"  Compile Time: {result.llama.compile_time:.2f}s")
+            
+            if result.llama.cpu_benchmark:
+                cpu_hw = result.meta.hardware.get(result.llama.cpu_benchmark.hw_id)
+                cpu_name = cpu_hw.name if cpu_hw else result.llama.cpu_benchmark.hw_id
+                print(f"\n  CPU ({cpu_name}):")
+                print(f"    Prompt: {result.llama.cpu_benchmark.prompt_speed:.1f} tokens/s")
+                print(f"    Generation: {result.llama.cpu_benchmark.generation_speed:.1f} tokens/s")
+            
+            if result.llama.gpu_benchmarks:
+                for gpu_bench in result.llama.gpu_benchmarks:
+                    gpu_hw = result.meta.hardware.get(gpu_bench.hw_id)
+                    gpu_name = gpu_hw.name if gpu_hw else gpu_bench.hw_id
+                    print(f"\n  GPU ({gpu_name}):")
+                    print(f"    Prompt: {gpu_bench.prompt_speed:.1f} tokens/s")
+                    print(f"    Generation: {gpu_bench.generation_speed:.1f} tokens/s")
+        
+        # 7-Zip Results
+        if result.sevenzip:
+            print("\n🗜️  7-ZIP")
+            print(f"  CPU Usage: {result.sevenzip.usage_percent:.0f}%")
+            print(f"  R/U MIPS: {result.sevenzip.ru_mips:.0f}")
+            print(f"  Total MIPS: {result.sevenzip.total_mips:.0f}")
+        
+        # Blender Results
+        if result.blender:
+            print("\n🎨 BLENDER")
+            
+            if result.blender.cpu:
+                print("\n  CPU:")
+                if result.blender.cpu.monster is not None:
+                    print(f"    Monster: {result.blender.cpu.monster:.1f} samples/min")
+                if result.blender.cpu.junkshop is not None:
+                    print(f"    Junkshop: {result.blender.cpu.junkshop:.1f} samples/min")
+                if result.blender.cpu.classroom is not None:
+                    print(f"    Classroom: {result.blender.cpu.classroom:.1f} samples/min")
+            
+            if result.blender.gpus:
+                for gpu_result in result.blender.gpus:
+                    gpu_hw = result.meta.hardware.get(gpu_result.hw_id)
+                    gpu_name = gpu_hw.name if gpu_hw else gpu_result.hw_id
+                    print(f"\n  GPU ({gpu_name}):")
+                    if gpu_result.scenes.monster is not None:
+                        print(f"    Monster: {gpu_result.scenes.monster:.1f} samples/min")
+                    if gpu_result.scenes.junkshop is not None:
+                        print(f"    Junkshop: {gpu_result.scenes.junkshop:.1f} samples/min")
+                    if gpu_result.scenes.classroom is not None:
+                        print(f"    Classroom: {gpu_result.scenes.classroom:.1f} samples/min")
+        
+        print(f"\n{'='*60}")
         
         # Upload results if requested
         if args.upload:
