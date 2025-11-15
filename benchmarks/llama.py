@@ -26,7 +26,7 @@ class CompilationToolbox:
     def clean_build_environment(self) -> None:
         """Clean the entire project directory for a fresh build."""
         if os.path.exists(self.project_dir):
-            print(f"🧹 Cleaning build environment: {self.project_dir}")
+            print(f"Cleaning build environment: {self.project_dir}")
             shutil.rmtree(self.project_dir)
 
     def prepare_build_directory(self) -> None:
@@ -35,8 +35,8 @@ class CompilationToolbox:
 
     def measure_build_phase(self, phase_name: str, cmd: List[str], cwd: str, env: Optional[Dict[str, str]] = None) -> tuple[float, subprocess.CompletedProcess]:
         """Measure the time for a build phase and return timing + result."""
-        print(f"⚙️  {phase_name}...")
-        print(f"🔧 Command: {' '.join(cmd)}")
+        print(f"{phase_name}...")
+        print(f"Command: {' '.join(cmd)}")
         start_time = time.perf_counter()
 
         # For build commands, show real-time progress
@@ -65,7 +65,7 @@ class CompilationToolbox:
 
                     if (line_count % 20 == 0 or
                         any(keyword in line for keyword in ["Built target", "Linking", "error:", "Error", "llama-bench"])):
-                        print(f"📈 {line}")
+                        print(line)
 
             process.wait()
 
@@ -80,14 +80,14 @@ class CompilationToolbox:
             result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, env=env)
 
         elapsed_time = time.perf_counter() - start_time
-        print(f"✅ {phase_name} completed in {elapsed_time:.2f}s")
+        print(f"{phase_name} completed in {elapsed_time:.2f}s")
 
         return elapsed_time, result
 
     def build_variant_with_timing(self, variant_name: str, cmake_config_cmd: List[str],
                                   error_handler=None, setup_callback=None, env: Optional[Dict[str, str]] = None) -> Dict[str, float]:
         """Build a variant with detailed timing and error handling."""
-        print(f"🔨 Building {variant_name} variant...")
+        print(f"Building {variant_name} variant...")
 
         self.clean_build_environment()
 
@@ -122,7 +122,7 @@ class CompilationToolbox:
             raise subprocess.CalledProcessError(build_result.returncode, build_cmd)
 
         total_time = config_time + build_time
-        print(f"🎉 {variant_name.capitalize()} build completed! Total: {total_time:.2f}s (config: {config_time:.2f}s, build: {build_time:.2f}s)")
+        print(f"{variant_name.capitalize()} build completed. Total: {total_time:.2f}s (config: {config_time:.2f}s, build: {build_time:.2f}s)")
 
         return {
             "config_time_seconds": config_time,
@@ -140,9 +140,14 @@ class LlamaBenchmark(BaseBenchmark):
         self.project_dir = os.path.abspath("llama.cpp")
         self.cpu_build_dir = os.path.join(self.project_dir, "build_cpu")
         self.vulkan_build_dir = os.path.join(self.project_dir, "build_vulkan")
-        self.shared_models_dir = os.path.abspath("models")
+
+        # Keep models for llama in their own subfolder to avoid colliding with other benchmarks
+        self.shared_models_dir = os.path.abspath(os.path.join("models", "llama"))
         self.project_models_dir = os.path.join(self.project_dir, "models")
-        self.model_url = "https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen3-4B-Instruct-2507-IQ4_NL.gguf?download=true"
+        self.model_url = (
+            "https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/main/"
+            "Qwen3-4B-Instruct-2507-IQ4_NL.gguf?download=true"
+        )
         self.model_filename = "Qwen3-4B-Instruct-2507-IQ4_NL.gguf"
         self.shared_model_path = os.path.join(self.shared_models_dir, self.model_filename)
         self.project_model_path = os.path.join(self.project_models_dir, self.model_filename)
@@ -195,14 +200,14 @@ class LlamaBenchmark(BaseBenchmark):
     def _check_vulkaninfo_functionality(self) -> None:
         """Check that vulkaninfo works and can extract GPU information properly"""
         if not shutil.which("vulkaninfo"):
-            raise RuntimeError(
-                "❌ vulkaninfo not found. This tool is required for GPU detection.\n"
-                "Install vulkan-tools package:\n"
-                "  Ubuntu/Debian: sudo apt install vulkan-tools\n"
-                "  Fedora/RHEL:   sudo dnf install vulkan-tools\n"
-                "  Arch Linux:    sudo pacman -S vulkan-tools\n"
-                "  openSUSE:      sudo zypper install vulkan-tools"
-            )
+                raise RuntimeError(
+                    "vulkaninfo not found. This tool is required for GPU detection.\n"
+                    "Install vulkan-tools package:\n"
+                    "  Ubuntu/Debian: sudo apt install vulkan-tools\n"
+                    "  Fedora/RHEL:   sudo dnf install vulkan-tools\n"
+                    "  Arch Linux:    sudo pacman -S vulkan-tools\n"
+                    "  openSUSE:      sudo zypper install vulkan-tools"
+                )
         
         # Test vulkaninfo functionality with the exact approach we'll use
         try:
@@ -228,80 +233,80 @@ class LlamaBenchmark(BaseBenchmark):
                 )
             
             # Test our parsing logic and show the actual GPUs found
-            devices = self._parse_vulkaninfo_text(output)
-            if not devices:
-                print("⚠️  vulkaninfo works but no 'GPU id = X (Name)' lines found.")
-                print("    This might indicate no GPUs or unusual vulkaninfo output format.")
-            else:
-                print(f"✅ Found {len(devices)} Vulkan GPU(s):")
-                for gpu in devices:
-                    print(f"   • Device {gpu['index']}: {gpu['name']} (Driver: {gpu.get('driver','unknown')})")
+                devices = self._parse_vulkaninfo_text(output)
+                if not devices:
+                    print("Warning: vulkaninfo works but no 'GPU id = X (Name)' lines found.")
+                    print("  This might indicate no GPUs or unusual vulkaninfo output format.")
+                else:
+                    print(f"Found {len(devices)} Vulkan GPU(s):")
+                    for gpu in devices:
+                        print(f"  Device {gpu['index']}: {gpu['name']} (Driver: {gpu.get('driver','unknown')})")
                 
         except subprocess.TimeoutExpired:
             raise RuntimeError(
-                "❌ vulkaninfo timed out after 30 seconds.\n"
-                "This usually indicates driver or system issues."
-            )
+                    "vulkaninfo timed out after 30 seconds.\n"
+                    "This usually indicates driver or system issues."
+                )
         except Exception as e:
             raise RuntimeError(f"❌ Failed to run vulkaninfo: {e}")
 
     def setup(self, skip_build: bool = False) -> None:
-        print("🔍 Checking system dependencies...")
+        print("Checking system dependencies...")
         self._check_dependencies()
-        print("✅ All required dependencies found!")
+        print("All required dependencies found.")
 
-        print("🔍 Verifying vulkaninfo functionality...")
+        print("Verifying vulkaninfo functionality...")
         self._check_vulkaninfo_functionality()
 
-        print("🎮 Detecting available GPUs (deferred until after build)...")
+        print("Detecting available GPUs (deferred until after build)...")
         # GPU detection will be done after build when binaries are available
         self.available_gpus = []  # Initialize empty, will populate after build
 
         os.makedirs(self.shared_models_dir, exist_ok=True)
 
         if not os.path.exists(self.shared_model_path):
-            print(f"📥 Downloading model {self.model_filename} to shared location...")
+            print(f"Downloading model {self.model_filename} to shared location: {self.shared_model_path}")
             self._download_model_to_shared_location()
         else:
-            print(f"✅ Model {self.model_filename} already exists in shared location, skipping download")
+            print(f"Model {self.model_filename} already exists in shared location, skipping download")
             file_size = os.path.getsize(self.shared_model_path) // (1024 * 1024)
-            print(f"📄 Model file size: {file_size} MB")
+            print(f"Model file size: {file_size} MB")
 
         if skip_build:
             # Ensure project dir exists to find binaries
             if not os.path.isdir(self.project_dir):
-                print("⚠️  --skip-build requested but project directory does not exist. Cloning only.")
+                print("--skip-build requested but project directory does not exist. Cloning only.")
                 self._setup_project_only()
             # Ensure model in project
             os.makedirs(self.project_models_dir, exist_ok=True)
             if not os.path.exists(self.project_model_path) and os.path.exists(self.shared_model_path):
                 shutil.copy2(self.shared_model_path, self.project_model_path)
-            
+
             # For skip_build mode, detect GPUs using existing binaries
-            print("🎮 Detecting available GPUs using existing binaries...")
+            print("Detecting available GPUs using existing binaries...")
             self.available_gpus = self._detect_available_gpus()
             if self.available_gpus:
-                print(f"✅ Found {len(self.available_gpus)} Vulkan GPU(s):")
+                print(f"Found {len(self.available_gpus)} Vulkan GPU(s):")
                 for gpu in self.available_gpus:
-                    print(f"   • Device {gpu['index']}: {gpu['name']} (Driver: {gpu.get('driver','unknown')})")
+                    print(f"  Device {gpu['index']}: {gpu['name']} (Driver: {gpu.get('driver','unknown')})")
             else:
-                print("⚠️  No Vulkan GPUs detected using existing binaries")
+                print("No Vulkan GPUs detected using existing binaries")
 
     def _download_model_to_shared_location(self) -> None:
         def progress_hook(block_num, block_size, total_size):
             downloaded = block_num * block_size
             if total_size > 0:
                 percent = min(100, (downloaded * 100) // total_size)
-                print(f"\r📥 Downloading: {percent}% ({downloaded // (1024*1024)} MB / {total_size // (1024*1024)} MB)", end="", flush=True)
+                print(f"\rDownloading: {percent}% ({downloaded // (1024*1024)} MB / {total_size // (1024*1024)} MB)", end="", flush=True)
         try:
             urllib.request.urlretrieve(self.model_url, self.shared_model_path, progress_hook)
-            print(f"\n✅ Model downloaded successfully to {self.shared_model_path}")
+            print(f"\nModel downloaded successfully to {self.shared_model_path}")
         except Exception as e:
-            print(f"\n❌ Failed to download model: {e}")
+            print(f"\nFailed to download model: {e}")
             raise
 
     def _setup_project_only(self) -> None:
-        print(f"📂 Cloning {self.repo_url} -> {self.project_dir}")
+        print(f"Cloning {self.repo_url} -> {self.project_dir}")
         try:
             self.run_command(["git", "clone", "--depth", "1", self.repo_url, self.project_dir])
         except subprocess.CalledProcessError as e:
@@ -310,101 +315,110 @@ class LlamaBenchmark(BaseBenchmark):
     def _setup_project_and_copy_model(self) -> None:
         self._setup_project_only()
         os.makedirs(self.project_models_dir, exist_ok=True)
-        print("📋 Copying model from shared location...")
+        print("Copying model from shared location...")
         shutil.copy2(self.shared_model_path, self.project_model_path)
-        print(f"✅ Model copied to {self.project_model_path}")
+        print(f"Model copied to {self.project_model_path}")
 
     def build(self, args: Any = None) -> Dict[str, Any]:
         build_results: Dict[str, Any] = {}
-
         print(f"\n{'='*60}")
-        print(f"🚀 Building llama.cpp with CPU and Vulkan versions")
+        print("Building llama.cpp with CPU and Vulkan versions")
         print(f"{'='*60}")
 
         skip_build = bool(args and getattr(args, "skip_build", False))
         if skip_build:
-            print("⏭️  --skip-build: skipping compilation and reusing existing binaries if present.")
+            print("--skip-build: skipping compilation and reusing existing binaries if present.")
 
         # If skipping build, only ensure repo+model exist and probe binaries
         if skip_build:
+            # Probe for existing repo, model and binaries
             self.setup(skip_build=True)
             cpu_binary = self._find_bench_binary("cpu", must_exist=False)
             vulkan_binary = self._find_bench_binary("vulkan", must_exist=False)
+
             if cpu_binary:
-                print(f"✅ Found CPU bench binary: {cpu_binary}")
+                print(f"Found CPU bench binary: {cpu_binary}")
                 build_results["cpu_bench_binary"] = cpu_binary
             else:
-                print("⚠️  CPU bench binary not found (expected at build_cpu/bin/llama-bench).")
+                print("CPU bench binary not found (expected at build_cpu/bin/llama-bench).")
 
             if not getattr(args, "no_gpu", False) and vulkan_binary:
-                print(f"✅ Found Vulkan bench binary: {vulkan_binary}")
+                print(f"Found Vulkan bench binary: {vulkan_binary}")
                 build_results["vulkan_bench_binary"] = vulkan_binary
                 build_results["gpu_bench_binary"] = vulkan_binary
                 vulkan_devices = self._check_vulkan_devices(vulkan_binary)
                 build_results["vulkan_devices"] = vulkan_devices
                 build_results["vulkan_supported"] = bool(vulkan_devices and len(vulkan_devices) > 0)
-                
+
                 # Detect GPUs using existing binary in skip-build mode
-                print("🎮 Detecting available GPUs using existing binary...")
+                print("Detecting available GPUs using existing binary...")
                 self.available_gpus = self._detect_available_gpus()
                 if self.available_gpus:
-                    print(f"✅ Found {len(self.available_gpus)} Vulkan GPU(s):")
+                    print(f"Found {len(self.available_gpus)} Vulkan GPU(s):")
                     for gpu in self.available_gpus:
-                        print(f"   • Device {gpu['index']}: {gpu['name']} (Driver: {gpu.get('driver','unknown')})")
+                        print(f"  Device {gpu['index']}: {gpu['name']} (Driver: {gpu.get('driver','unknown')})")
                 else:
-                    print("⚠️  No Vulkan GPUs detected using existing binary")
+                    print("No Vulkan GPUs detected using existing binary")
             else:
-                print("ℹ️  Vulkan bench binary not found or --no-gpu set; skipping Vulkan probing.")
+                print("Vulkan bench binary not found or --no-gpu set; skipping Vulkan probing.")
                 build_results["vulkan_supported"] = False
 
-            if not any(k.endswith("_bench_binary") for k in build_results.keys()):
-                raise RuntimeError("No existing benchmark binaries found with --skip-build.")
-            return build_results
+            # If any required binary is missing, fall back to building (don't error out when --skip-build was given)
+            missing_cpu = "cpu_bench_binary" not in build_results
+            missing_vulkan = (not getattr(args, "no_gpu", False)) and ("vulkan_bench_binary" not in build_results)
+            if missing_cpu or missing_vulkan:
+                # Print a red warning to clearly indicate compilation is needed
+                red = "\033[31m"
+                reset = "\033[0m"
+                print(red + "One or more requested benchmark binaries are missing; switching to build mode to compile them." + reset)
+                # fall through into the normal build path below
+            else:
+                # All good: return detected binaries
+                return build_results
 
         # Clean build
-        print("🧹 Cleaning build environment...")
+        print("Cleaning build environment...")
         if os.path.exists(self.project_dir):
             shutil.rmtree(self.project_dir)
-
-        print("📦 Setting up project...")
+        print("Setting up project...")
         self._setup_project_and_copy_model()
 
         # CPU build with timing
-        print(f"\n🏗️  Building CPU version (measuring time)...")
+        print(f"\nBuilding CPU version (measuring time)...")
         try:
             cpu_timing = self._build_cpu_version()
             build_results["cpu_build_timing"] = cpu_timing
             cpu_binary = self._find_bench_binary("cpu")
             build_results["cpu_bench_binary"] = cpu_binary
-            print(f"✅ CPU build successful: {cpu_binary}")
+            print(f"CPU build successful: {cpu_binary}")
         except Exception as e:
-            print(f"❌ CPU build failed: {e}")
+            print(f"CPU build failed: {e}")
             build_results["cpu_build_error"] = str(e)
 
         # Vulkan build
-        print(f"\n🏗️  Building Vulkan version (no timing measurement)...")
+        print(f"\nBuilding Vulkan version (no timing measurement)...")
         try:
             self._build_vulkan_version()
             vulkan_binary = self._find_bench_binary("vulkan")
             build_results["vulkan_bench_binary"] = vulkan_binary
             build_results["gpu_bench_binary"] = vulkan_binary
-            print(f"✅ Vulkan build successful: {vulkan_binary}")
+            print(f"Vulkan build successful: {vulkan_binary}")
 
             vulkan_devices = self._check_vulkan_devices(vulkan_binary)
             build_results["vulkan_devices"] = vulkan_devices
             build_results["vulkan_supported"] = bool(vulkan_devices and len(vulkan_devices) > 0)
             
             # Now that we have a working Vulkan binary, properly detect GPUs
-            print("🎮 Detecting available GPUs using llama-bench binary...")
+            print("Detecting available GPUs using llama-bench binary...")
             self.available_gpus = self._detect_available_gpus()
             if self.available_gpus:
-                print(f"✅ Found {len(self.available_gpus)} Vulkan GPU(s):")
+                print(f"Found {len(self.available_gpus)} Vulkan GPU(s):")
                 for gpu in self.available_gpus:
-                    print(f"   • Device {gpu['index']}: {gpu['name']} (Driver: {gpu.get('driver','unknown')})")
+                    print(f"  Device {gpu['index']}: {gpu['name']} (Driver: {gpu.get('driver','unknown')})")
             else:
-                print("⚠️  No Vulkan GPUs detected using llama-bench binary")
+                print("No Vulkan GPUs detected using llama-bench binary")
         except Exception as e:
-            print(f"❌ Vulkan build failed: {e}")
+            print(f"Vulkan build failed: {e}")
             build_results["vulkan_build_error"] = str(e)
 
         if not any(key.endswith("_bench_binary") for key in build_results.keys()):
