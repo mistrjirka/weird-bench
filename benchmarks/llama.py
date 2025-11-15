@@ -215,40 +215,39 @@ class LlamaBenchmark(BaseBenchmark):
                 ["vulkaninfo"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,  # Suppress warnings like the AWK script
-                text=True, 
+                text=True,
                 timeout=30
             )
-            
+
             if result.returncode != 0:
                 raise RuntimeError(
-                    f"❌ vulkaninfo failed with exit code {result.returncode}.\n"
+                    f"vulkaninfo failed with exit code {result.returncode}.\n"
                     "This usually means Vulkan drivers are not properly installed."
                 )
-            
+
             output = result.stdout or ""
             if not output.strip():
                 raise RuntimeError(
-                    "❌ vulkaninfo produced no output.\n"
+                    "vulkaninfo produced no output.\n"
                     "This usually means Vulkan drivers are not properly installed."
                 )
-            
+
             # Test our parsing logic and show the actual GPUs found
-                devices = self._parse_vulkaninfo_text(output)
-                if not devices:
-                    print("Warning: vulkaninfo works but no 'GPU id = X (Name)' lines found.")
-                    print("  This might indicate no GPUs or unusual vulkaninfo output format.")
-                else:
-                    print(f"Found {len(devices)} Vulkan GPU(s):")
-                    for gpu in devices:
-                        print(f"  Device {gpu['index']}: {gpu['name']} (Driver: {gpu.get('driver','unknown')})")
-                
+            devices = self._parse_vulkaninfo_text(output)
+            if not devices:
+                print("Warning: vulkaninfo works but no 'GPU id = X (Name)' lines found.")
+                print("  This might indicate no GPUs or unusual vulkaninfo output format.")
+            else:
+                print(f"Found {len(devices)} Vulkan GPU(s):")
+                for gpu in devices:
+                    print(f"  Device {gpu['index']}: {gpu['name']} (Driver: {gpu.get('driver','unknown')})")
         except subprocess.TimeoutExpired:
             raise RuntimeError(
-                    "vulkaninfo timed out after 30 seconds.\n"
-                    "This usually indicates driver or system issues."
-                )
+                "vulkaninfo timed out after 30 seconds.\n"
+                "This usually indicates driver or system issues."
+            )
         except Exception as e:
-            raise RuntimeError(f"❌ Failed to run vulkaninfo: {e}")
+            raise RuntimeError(f"Failed to run vulkaninfo: {e}")
 
     def setup(self, skip_build: bool = False) -> None:
         print("Checking system dependencies...")
@@ -746,7 +745,7 @@ class LlamaBenchmark(BaseBenchmark):
                 for p_size in prompt_sizes:
                     for g_size in cpu_generation_sizes:
                         print(f"Running CPU benchmark: prompt={p_size}, generation={g_size}")
-                        cmd = [cpu_binary, "-m", self.project_model_path, "-p", str(p_size), "-n", str(g_size)]
+                        cmd = [cpu_binary, "-m", self.project_model_path, "-p", str(p_size), "-n", str(g_size), "--numa", "numactl"]
                         result = self._run_benchmark_command(cmd, "cpu", p_size, g_size, 0)
                         results["runs_cpu"].append(result)
             except Exception as e:
