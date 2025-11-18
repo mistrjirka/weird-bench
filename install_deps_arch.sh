@@ -23,7 +23,8 @@ sudo pacman -S --needed \
     python \
     python-pip \
     pkgconf \
-    vulkan-tools
+    vulkan-tools \
+    python-yaml
 
 
 # 7-Zip for compression benchmark
