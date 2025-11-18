@@ -26,6 +26,7 @@ from benchmarks.reversan import ReversanBenchmark
 from benchmarks.llama import LlamaBenchmark  
 from benchmarks.sevenzip import SevenZipBenchmark
 from benchmarks.blender import BlenderBenchmark
+from benchmarks.console import red, green, grey
 
 
 class UnifiedBenchmarkRunner:
@@ -43,9 +44,9 @@ class UnifiedBenchmarkRunner:
         # Check for GNU time (required for detailed benchmarking)
         self.gnu_time = self._find_gnu_time()
         if not self.gnu_time:
-            print("⚠️  GNU time utility not found: detailed process metrics will be null for benchmarks that rely on it.")
+            print(grey("GNU time utility not found: detailed process metrics will be null for benchmarks that rely on it."))
         else:
-            print(f"ℹ️  GNU time detected at: {self.gnu_time}")
+            print(grey(f"GNU time detected at: {self.gnu_time}"))
 
     def _find_gnu_time(self) -> Optional[str]:
         """Find a usable 'time' utility. On many distros (incl. Arch), /usr/bin/time is GNU time by default."""
@@ -74,7 +75,7 @@ class UnifiedBenchmarkRunner:
         if not self.system_info:
             raise RuntimeError("Hardware detection must be run first. Call detect_hardware().")
         
-        print(f"\n🚀 Running {benchmark_name} benchmark...")
+        print(grey(f"\nRunning {benchmark_name} benchmark..."))
         
         if benchmark_name == "reversan":
             return self._run_reversan_benchmark(args)
@@ -119,6 +120,7 @@ class UnifiedBenchmarkRunner:
             thread_benchmarks=[ReversanThreadResult(**t) for t in thread_benchmarks]
         )
 
+    
     def _run_llama_benchmark(self, args: Any = None) -> LlamaBenchmarkResult:
         """Run Llama benchmark with unified output."""
         benchmark = LlamaBenchmark(self.output_dir)
@@ -130,7 +132,16 @@ class UnifiedBenchmarkRunner:
         if hasattr(args, 'vk_driver') and args.vk_driver:
             benchmark.set_gpu_selection(vk_driver_files=args.vk_driver)
         
-        build_result = benchmark.build()
+        # Set NUMA options if specified
+        if hasattr(args, 'numa_distribute') or hasattr(args, 'numa_isolate') or hasattr(args, 'numactl'):
+            benchmark.set_numa_options(
+                numa_distribute=getattr(args, 'numa_distribute', False),
+                numa_isolate=getattr(args, 'numa_isolate', False),
+                numactl_cmd=getattr(args, 'numactl', None)
+            )
+        
+        # Pass args so the benchmark can honor flags like --skip-build and --no-gpu
+        build_result = benchmark.build(args)
         
         # Run benchmarks
         cpu_benchmark = None
@@ -292,15 +303,15 @@ class UnifiedBenchmarkRunner:
                 result = self.run_benchmark(benchmark_name, args)
                 setattr(unified_result, benchmark_name, result)
                 
-                print(f"✅ {benchmark_name} benchmark completed successfully")
+                print(green(f"{benchmark_name} benchmark completed successfully"))
                 
             except Exception as e:
-                print(f"❌ {benchmark_name} benchmark failed: {e}")
+                print(red(f"{benchmark_name} benchmark failed: {e}"))
                 # Continue with other benchmarks
                 continue
         
         elapsed_time = time.time() - start_time
-        print(f"\n🎉 All benchmarks completed in {elapsed_time:.1f} seconds")
+        print(grey(f"\nAll benchmarks completed in {elapsed_time:.1f} seconds"))
         
         return unified_result
 
@@ -442,6 +453,16 @@ def main():
     parser.add_argument("--list-gpus", action="store_true",
                         help="List available Vulkan GPU devices and exit")
 
+    # NUMA options for llama benchmark
+    parser.add_argument("--numa-distribute", action="store_true",
+                        help="Use NUMA distribute mode (numactl --interleave=all) for llama benchmark")
+    
+    parser.add_argument("--numa-isolate", action="store_true",
+                        help="Use NUMA isolate mode for llama benchmark")
+    
+    parser.add_argument("--numactl",
+                        help="Custom numactl command prefix for llama benchmark (e.g., 'numactl --interleave=all')")
+
     parser.add_argument("--api-url", default="https://weirdbench.eu/api",
                         help="API URL for result uploads")
 
@@ -527,6 +548,80 @@ def main():
         
         print(f"Benchmarks: {', '.join(benchmarks_run)}")
         print(f"Output: {filepath}")
+        
+        # Print detailed results
+        print(f"\n{'='*60}")
+        print("📈 DETAILED RESULTS")
+        print(f"{'='*60}")
+        
+        # Reversan Results
+        if result.reversan:
+            print("\n🔄 REVERSAN")
+            print(f"  Compile Time: {result.reversan.compile_time:.2f}s")
+            
+            if result.reversan.depth_benchmarks:
+                print("\n  Depth Benchmarks:")
+                for db in result.reversan.depth_benchmarks:
+                    print(f"    Depth {db.depth}: {db.time_seconds:.2f}s, {db.memory_kb/1024:.1f}MB")
+            
+            if result.reversan.thread_benchmarks:
+                print("\n  Thread Benchmarks:")
+                for tb in result.reversan.thread_benchmarks:
+                    print(f"    {tb.threads} threads: {tb.time_seconds:.2f}s, {tb.memory_kb/1024:.1f}MB")
+        
+        # Llama Results
+        if result.llama:
+            print("\n🦙 LLAMA")
+            print(f"  Compile Time: {result.llama.compile_time:.2f}s")
+            
+            if result.llama.cpu_benchmark:
+                cpu_hw = result.meta.hardware.get(result.llama.cpu_benchmark.hw_id)
+                cpu_name = cpu_hw.name if cpu_hw else result.llama.cpu_benchmark.hw_id
+                print(f"\n  CPU ({cpu_name}):")
+                print(f"    Prompt: {result.llama.cpu_benchmark.prompt_speed:.1f} tokens/s")
+                print(f"    Generation: {result.llama.cpu_benchmark.generation_speed:.1f} tokens/s")
+            
+            if result.llama.gpu_benchmarks:
+                for gpu_bench in result.llama.gpu_benchmarks:
+                    gpu_hw = result.meta.hardware.get(gpu_bench.hw_id)
+                    gpu_name = gpu_hw.name if gpu_hw else gpu_bench.hw_id
+                    print(f"\n  GPU ({gpu_name}):")
+                    print(f"    Prompt: {gpu_bench.prompt_speed:.1f} tokens/s")
+                    print(f"    Generation: {gpu_bench.generation_speed:.1f} tokens/s")
+        
+        # 7-Zip Results
+        if result.sevenzip:
+            print("\n🗜️  7-ZIP")
+            print(f"  CPU Usage: {result.sevenzip.usage_percent:.0f}%")
+            print(f"  R/U MIPS: {result.sevenzip.ru_mips:.0f}")
+            print(f"  Total MIPS: {result.sevenzip.total_mips:.0f}")
+        
+        # Blender Results
+        if result.blender:
+            print("\n🎨 BLENDER")
+            
+            if result.blender.cpu:
+                print("\n  CPU:")
+                if result.blender.cpu.monster is not None:
+                    print(f"    Monster: {result.blender.cpu.monster:.1f} samples/min")
+                if result.blender.cpu.junkshop is not None:
+                    print(f"    Junkshop: {result.blender.cpu.junkshop:.1f} samples/min")
+                if result.blender.cpu.classroom is not None:
+                    print(f"    Classroom: {result.blender.cpu.classroom:.1f} samples/min")
+            
+            if result.blender.gpus:
+                for gpu_result in result.blender.gpus:
+                    gpu_hw = result.meta.hardware.get(gpu_result.hw_id)
+                    gpu_name = gpu_hw.name if gpu_hw else gpu_result.hw_id
+                    print(f"\n  GPU ({gpu_name}):")
+                    if gpu_result.scenes.monster is not None:
+                        print(f"    Monster: {gpu_result.scenes.monster:.1f} samples/min")
+                    if gpu_result.scenes.junkshop is not None:
+                        print(f"    Junkshop: {gpu_result.scenes.junkshop:.1f} samples/min")
+                    if gpu_result.scenes.classroom is not None:
+                        print(f"    Classroom: {gpu_result.scenes.classroom:.1f} samples/min")
+        
+        print(f"\n{'='*60}")
         
         # Upload results if requested
         if args.upload:

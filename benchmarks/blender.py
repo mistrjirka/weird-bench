@@ -29,6 +29,41 @@ class BlenderBenchmark(BaseBenchmark):
         self.launcher_path = os.path.join(self.benchmark_dir, "benchmark-launcher-cli")
         self.results["meta"]["benchmark_url"] = self.benchmark_url
     
+    # --- Public helpers for external tools (UI) ---
+    def ensure_benchmark_downloaded(self) -> bool:
+        """Ensure the Blender Benchmark CLI is downloaded and ready.
+
+        Returns True if the launcher exists after this call, False otherwise.
+        """
+        try:
+            self.setup()
+            return os.path.exists(self.launcher_path)
+        except Exception:
+            return False
+
+    def ensure_blender_downloaded(self, version: str = "4.5.0") -> bool:
+        """Ensure the specific Blender version assets are available via the launcher.
+
+        Current implementation downloads 4.5.0 via the launcher.
+        The version argument is accepted for forward compatibility.
+        """
+        # The internal method currently downloads 4.5.0 specifically
+        # Keep the signature flexible in case we add parametrization later
+        return self._download_blender()
+
+    def list_devices(self, version: str = "4.5.0") -> List[Dict[str, str]]:
+        """List devices detected by the Blender Benchmark launcher for a given Blender version.
+
+        Ensures the requested Blender version is prepared before listing.
+        Returns a list of dicts with at least: {"name": str, "framework": str}.
+        """
+        # Make sure the assets are present; ignore failure here to still attempt listing
+        try:
+            _ = self.ensure_blender_downloaded(version)
+        except Exception:
+            pass
+        return self._get_available_devices()
+
     def setup(self) -> None:
         """Download and extract the Blender benchmark."""
         # Always delete and re-extract for clean state

@@ -24,7 +24,9 @@ sudo pacman -S --needed \
     python-pip \
     pkgconf \
     vulkan-tools \
-    python-yaml
+    python-yaml \
+    python-psutil \
+    python-tkinter
 
 
 # 7-Zip for compression benchmark
