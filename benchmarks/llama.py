@@ -288,11 +288,32 @@ class LlamaBenchmark(BaseBenchmark):
                 print("⚠️  No Vulkan GPUs detected using existing binaries")
 
     def _download_model_to_shared_location(self) -> None:
+        start_time = time.perf_counter()
+
         def progress_hook(block_num, block_size, total_size):
             downloaded = block_num * block_size
-            if total_size > 0:
+            if total_size and total_size > 0:
+                downloaded = min(downloaded, total_size)
+            elapsed = max(time.perf_counter() - start_time, 1e-6)
+            downloaded_mb = downloaded / (1024 * 1024)
+            speed_mb_s = downloaded_mb / elapsed
+
+            if total_size and total_size > 0:
                 percent = min(100, (downloaded * 100) // total_size)
-                print(f"\r📥 Downloading: {percent}% ({downloaded // (1024*1024)} MB / {total_size // (1024*1024)} MB)", end="", flush=True)
+                total_mb = total_size / (1024 * 1024)
+                total_display = f"{total_mb:.2f} MB"
+            else:
+                percent = None
+                total_display = "unknown size"
+
+            percent_display = f"{percent}%" if percent is not None else "??%"
+            print(
+                f"\r📥 Downloading: {percent_display} ({downloaded_mb:.2f} MB / {total_display}) "
+                f"@ {speed_mb_s:.2f} MB/s",
+                end="",
+                flush=True
+            )
+
         try:
             urllib.request.urlretrieve(self.model_url, self.shared_model_path, progress_hook)
             print(f"\n✅ Model downloaded successfully to {self.shared_model_path}")
